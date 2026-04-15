@@ -64,8 +64,22 @@ jobs:
           CGO_LDFLAGS: '-framework CoreFoundation -framework AppKit -framework UniformTypeIdentifiers'
         run: wails build -platform darwin/amd64
 
-      - name: Package macOS app
-        run: hdiutil create -volname Deckanator -srcfolder build/bin/Deckanator.app -ov -format UDZO deckanator-macos.dmg
+      - name: Install create-dmg
+        run: brew install create-dmg
+
+      - name: Package macOS DMG
+        run: |
+          create-dmg \
+            --volname "Deckanator" \
+            --background "build/dmg/background.png" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 128 \
+            --icon "Deckanator.app" 150 200 \
+            --hide-extension "Deckanator.app" \
+            --app-drop-link 450 200 \
+            deckanator-macos.dmg \
+            build/bin/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
