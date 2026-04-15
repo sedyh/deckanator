@@ -11,6 +11,7 @@
 
   let open = false
   let triggerEl
+  let listEl
   let openUpward = false
   let highlightedIdx = -1
   let itemEls = []
@@ -51,7 +52,17 @@
 
   async function scrollToHighlighted() {
     await tick()
-    itemEls[highlightedIdx]?.scrollIntoView({ block: 'nearest' })
+    const item = itemEls[highlightedIdx]
+    if (!item || !listEl) return
+    const itemTop    = item.offsetTop
+    const itemBottom = itemTop + item.offsetHeight
+    const listTop    = listEl.scrollTop
+    const listBottom = listTop + listEl.clientHeight
+    if (itemTop < listTop) {
+      listEl.scrollTo({ top: itemTop, behavior: 'smooth' })
+    } else if (itemBottom > listBottom) {
+      listEl.scrollTo({ top: itemBottom - listEl.clientHeight, behavior: 'smooth' })
+    }
   }
 
   function confirmHighlighted() {
@@ -115,7 +126,7 @@
   </button>
 
   {#if open}
-    <div class="list" class:up={openUpward} role="listbox">
+    <div class="list" class:up={openUpward} role="listbox" bind:this={listEl}>
       {#each options as opt, i}
         <button
           bind:this={itemEls[i]}
