@@ -234,26 +234,6 @@ func addToShortcuts(steamDir, userID, exeField, launchOptions, startDir, iconPat
 
 	shortcuts := root.sub["shortcuts"]
 
-	// find existing entry by AppName, or assign next index
-	existingKey := ""
-	maxIdx := -1
-	for _, k := range shortcuts.order {
-		idx, _ := strconv.Atoi(k)
-		if idx > maxIdx {
-			maxIdx = idx
-		}
-		if e := shortcuts.sub[k]; e != nil {
-			if nameNode := e.sub["AppName"]; nameNode != nil && nameNode.str == appName {
-				existingKey = k
-			}
-		}
-	}
-
-	key := existingKey
-	if key == "" {
-		key = strconv.Itoa(maxIdx + 1)
-	}
-
 	// stop Steam before modifying shortcuts.vdf - otherwise Steam overwrites our changes on exit
 	exec.Command("pkill", "-x", "steam").Run()
 	exec.Command("pkill", "-x", "Steam").Run()
@@ -272,6 +252,25 @@ func addToShortcuts(steamDir, userID, exeField, launchOptions, startDir, iconPat
 		}
 	}
 
+	// remove existing entry by AppName, then append fresh - avoids stale field values
+	maxIdx := -1
+	newOrder := shortcuts.order[:0]
+	for _, k := range shortcuts.order {
+		idx, _ := strconv.Atoi(k)
+		if idx > maxIdx {
+			maxIdx = idx
+		}
+		if e := shortcuts.sub[k]; e != nil {
+			if nameNode := e.sub["AppName"]; nameNode != nil && nameNode.str == appName {
+				delete(shortcuts.sub, k)
+				continue
+			}
+		}
+		newOrder = append(newOrder, k)
+	}
+	shortcuts.order = newOrder
+
+	key := strconv.Itoa(maxIdx + 1)
 	shortcuts.set(key, buildShortcut(appID, appName, exeField, startDir, iconPath, launchOptions))
 
 	// sort keys numerically for clean output
