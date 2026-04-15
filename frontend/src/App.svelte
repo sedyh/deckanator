@@ -71,42 +71,32 @@
 
   // ── Gamepad polling ──────────────────────────────────────────────────────
   const BUTTON_MAP = {
-    0:  'Enter',      // A
-    1:  'Escape',     // B
+    0:  'Enter',
+    1:  'Escape',
     12: 'ArrowUp',
     13: 'ArrowDown',
     14: 'ArrowLeft',
     15: 'ArrowRight',
   }
-  const REPEAT_DELAY = 400
-  const REPEAT_RATE  = 120
   const STICK_THRESHOLD = 0.5
 
   let rafId = null
   let gamepadCount = 0
-  const btnState  = {}
-  const axisState = {}
+  const btnPressed = {}
+  const axisState  = {}
 
   function fireKey(key) {
     window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
   }
 
-  function pollGamepads(now) {
+  function pollGamepads() {
     for (const gp of navigator.getGamepads()) {
       if (!gp) continue
 
       for (const [idx, key] of Object.entries(BUTTON_MAP)) {
-        const btn = gp.buttons[idx]
-        const pressed = btn?.pressed ?? false
-        const s = btnState[idx] ?? (btnState[idx] = { pressed: false, repeatAt: 0 })
-        if (pressed && !s.pressed) {
-          fireKey(key)
-          s.repeatAt = now + REPEAT_DELAY
-        } else if (pressed && now >= s.repeatAt) {
-          fireKey(key)
-          s.repeatAt = now + REPEAT_RATE
-        }
-        s.pressed = pressed
+        const pressed = gp.buttons[idx]?.pressed ?? false
+        if (pressed && !btnPressed[idx]) fireKey(key)
+        btnPressed[idx] = pressed
       }
 
       const lx = gp.axes[0] ?? 0
