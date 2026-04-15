@@ -484,7 +484,7 @@ func main() {
 
 		assetURL := ""
 		for _, a := range rel.Assets {
-			if strings.Contains(a.Name, "linux") && strings.Contains(a.Name, "amd64") {
+			if strings.Contains(a.Name, "linux") && strings.Contains(a.Name, "amd64") && !strings.Contains(a.Name, "installer") {
 				assetURL = a.BrowserDownloadURL
 				break
 			}
