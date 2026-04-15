@@ -10,11 +10,19 @@
   import Carousel       from './components/Carousel.svelte'
   import VersionSelector from './components/VersionSelector.svelte'
   import ActionButton   from './components/ActionButton.svelte'
-  import { GlyphA, GlyphB, GlyphDPadH, IconPlus } from './lib/icons.js'
+  import { GlyphA, GlyphB, GlyphDPadH, GlyphDPadV, IconPlus } from './lib/icons.js'
 
   let profiles        = []
   let icons           = []
   let selectedIndex   = 0
+
+  let carouselRef
+  let carouselMode  = 'nav'
+  let newProfileBtnEl
+  let versionSelRef
+  let actionBtnRef
+
+  let panelIdx = -1  // -1 = carousel, 0=new-profile, 1=mc, 2=fabric, 3=java, 4=run
 
   const loader = 'fabric'
   let mcVersions          = []
@@ -199,12 +207,102 @@
     await SaveProfile(e.detail)
     profiles = profiles.map(p => p.id === e.detail.id ? e.detail : p)
   }
+
+  $: locked = installed || installing
+
+  $: focusableItems = buildFocusableItems(locked, loader)
+
+  $: if (focusableItems && panelIdx >= 0) {
+    const item = focusableItems.find(i => i.idx === panelIdx)
+    if (item) {
+      item.focus()
+    } else {
+      const last = focusableItems[focusableItems.length - 1]
+      panelIdx = last?.idx ?? -1
+      last?.focus()
+    }
+  }
+
+  function buildFocusableItems(locked, loader) {
+    const items = [{ idx: 0, focus: () => newProfileBtnEl?.focus() }]
+    if (!locked) {
+      items.push({ idx: 1, focus: () => versionSelRef?.focusMC() })
+      if (loader === 'fabric') items.push({ idx: 2, focus: () => versionSelRef?.focusFabric() })
+      items.push({ idx: 3, focus: () => versionSelRef?.focusJava() })
+    }
+    items.push({ idx: 4, focus: () => actionBtnRef?.focus() })
+    return items
+  }
+
+  function navigatePanelBy(delta) {
+    const pos = focusableItems.findIndex(i => i.idx === panelIdx)
+    const next = pos + delta
+    if (next < 0) {
+      panelIdx = -1
+      carouselRef?.enterAction()
+      return
+    }
+    if (next >= focusableItems.length) return
+    panelIdx = focusableItems[next].idx
+    focusableItems[next].focus()
+  }
+
+  function handleEnterPanel() {
+    if (focusableItems.length > 0) {
+      panelIdx = focusableItems[0].idx
+      focusableItems[0].focus()
+    }
+  }
+
+  function handleGlobalKey(e) {
+    if (document.querySelector('.wrap.open')) return
+
+    if (carouselMode === 'edit') return
+
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault()
+      const keepAction = carouselMode === 'action'
+      if (e.key === 'ArrowLeft') carouselRef?.navigateLeft(keepAction)
+      else carouselRef?.navigateRight(keepAction)
+      return
+    }
+
+    if (carouselMode === 'action') return
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      if (panelIdx === -1) {
+        if (focusableItems.length > 0) {
+          panelIdx = focusableItems[0].idx
+          focusableItems[0].focus()
+        }
+      } else {
+        navigatePanelBy(1)
+      }
+      return
+    }
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      if (panelIdx >= 0) navigatePanelBy(-1)
+      return
+    }
+
+    if (e.key === 'Escape' && panelIdx >= 0) {
+      panelIdx = -1
+      carouselRef?.focusCarousel()
+    }
+  }
 </script>
+
+<svelte:window on:keydown={handleGlobalKey} />
 
 <div class="app">
   <div class="content">
     <section class="carousel-section">
       <Carousel
+        bind:this={carouselRef}
+        bind:mode={carouselMode}
         {profiles}
         {icons}
         bind:selectedIndex
@@ -215,12 +313,19 @@
         on:create={handleCreate}
         on:delete={handleDelete}
         on:save={handleSave}
+        on:enterPanel={handleEnterPanel}
       />
     </section>
 
     <div class="panel-row">
       <section class="panel">
-        <button class="new-profile-btn" on:click={handleCreate} tabindex="-1">
+        <button
+          bind:this={newProfileBtnEl}
+          class="new-profile-btn"
+          class:panel-focused={panelIdx === 0}
+          on:click={handleCreate}
+          tabindex="-1"
+        >
           <span class="new-profile-icon">{@html IconPlus}</span>
           <span>New Profile</span>
         </button>
@@ -228,6 +333,7 @@
         <div class="spacer" />
 
         <VersionSelector
+          bind:this={versionSelRef}
           {loader}
           mcVersions={filteredMCVersions}
           bind:selectedMC
@@ -241,6 +347,7 @@
         <div class="spacer" />
 
         <ActionButton
+          bind:this={actionBtnRef}
           {installed}
           {installing}
           {launching}
@@ -261,13 +368,17 @@
     <div class="hints-left">
       <span class="hint">
         <span class="glyph">{@html GlyphDPadH}</span>
+        <span>Profiles</span>
+      </span>
+      <span class="hint">
+        <span class="glyph">{@html GlyphDPadV}</span>
         <span>Navigate</span>
       </span>
     </div>
     <div class="hints-right">
       <span class="hint">
         <span class="glyph">{@html GlyphA}</span>
-        <span>{installed ? 'Select' : 'Download'}</span>
+        <span>Select</span>
       </span>
       <span class="hint">
         <span class="glyph">{@html GlyphB}</span>
@@ -302,6 +413,7 @@
     display: flex;
     justify-content: center;
     overflow: visible;
+    isolation: isolate;
   }
 
   .panel-row {
@@ -359,10 +471,15 @@
     font-weight: 400;
     transition: background var(--t), color var(--t), font-weight var(--t);
   }
-  .new-profile-btn:hover {
+  .new-profile-btn:hover,
+  .new-profile-btn.panel-focused {
     background: var(--card-btn-hover);
     color: var(--text);
     font-weight: 700;
+  }
+  .new-profile-btn:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--accent);
   }
   .new-profile-icon {
     display: inline-flex;
@@ -392,7 +509,7 @@
     flex-shrink: 0;
   }
 
-  .hints-left { flex: 1; }
+  .hints-left { flex: 1; display: flex; align-items: center; gap: 1.11rem; }
 
   .hints-right {
     display: flex;

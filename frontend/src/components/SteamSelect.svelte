@@ -12,6 +12,12 @@
   let open = false
   let triggerEl
   let openUpward = false
+  let highlightedIdx = -1
+  let itemEls = []
+
+  export function focus() {
+    triggerEl?.querySelector('.trigger')?.focus()
+  }
 
   function checkPosition() {
     if (!triggerEl) return
@@ -25,11 +31,13 @@
 
   function closeDropdown() {
     open = false
+    highlightedIdx = -1
     document.removeEventListener('click', handleOutside)
   }
 
   async function openDropdown() {
     checkPosition()
+    highlightedIdx = options.findIndex(o => o.value === value)
     open = true
     await tick()
     document.addEventListener('click', handleOutside)
@@ -41,6 +49,19 @@
     dispatch('change', v)
   }
 
+  async function scrollToHighlighted() {
+    await tick()
+    itemEls[highlightedIdx]?.scrollIntoView({ block: 'nearest' })
+  }
+
+  function confirmHighlighted() {
+    if (highlightedIdx >= 0 && highlightedIdx < options.length) {
+      select(options[highlightedIdx].value)
+    } else {
+      closeDropdown()
+    }
+  }
+
   async function toggle() {
     if (disabled) return
     if (open) closeDropdown()
@@ -49,17 +70,26 @@
 
   function handleKeydown(e) {
     if (!open) {
-      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+      if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault()
+        e.stopPropagation()
         openDropdown()
       }
+      // ArrowDown/Up bubble to global panel navigation handler
       return
     }
-    const idx = options.findIndex(o => o.value === value)
-    if (e.key === 'Escape')    { closeDropdown() }
-    if (e.key === 'ArrowDown') { e.preventDefault(); select(options[Math.min(idx + 1, options.length - 1)].value) }
-    if (e.key === 'ArrowUp')   { e.preventDefault(); select(options[Math.max(idx - 1, 0)].value) }
-    if (e.key === 'Enter')     { closeDropdown() }
+    if (e.key === 'Escape')    { e.stopPropagation(); closeDropdown() }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault(); e.stopPropagation()
+      highlightedIdx = Math.min(highlightedIdx + 1, options.length - 1)
+      scrollToHighlighted()
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault(); e.stopPropagation()
+      highlightedIdx = Math.max(highlightedIdx - 1, 0)
+      scrollToHighlighted()
+    }
+    if (e.key === 'Enter')     { e.preventDefault(); e.stopPropagation(); confirmHighlighted() }
   }
 
   function handleOutside(e) {
@@ -86,12 +116,15 @@
 
   {#if open}
     <div class="list" class:up={openUpward} role="listbox">
-      {#each options as opt}
+      {#each options as opt, i}
         <button
+          bind:this={itemEls[i]}
           class="item"
           class:active={opt.value === value}
+          class:highlighted={i === highlightedIdx}
           role="option"
           aria-selected={opt.value === value}
+          on:mouseenter={() => highlightedIdx = i}
           on:click|stopPropagation={() => select(opt.value)}
         >
           {opt.label}
@@ -122,6 +155,7 @@
     transition: background var(--t), font-weight var(--t);
   }
   .trigger:hover { background: var(--card-btn-hover); font-weight: 700; }
+  .trigger:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
   .trigger:disabled { opacity: 0.35; cursor: default; }
 
   .val {
@@ -173,6 +207,8 @@
     transition: background var(--t), color var(--t), font-weight var(--t);
     white-space: nowrap;
   }
-  .item:hover { background: rgba(255,255,255,0.14); color: var(--text); font-weight: 700; }
+  .item:hover,
+  .item.highlighted { background: rgba(255,255,255,0.14); color: var(--text); font-weight: 700; }
   .item.active { color: var(--text); background: rgba(30,143,255,0.15); font-weight: 700; }
+  .item.active.highlighted { background: rgba(30,143,255,0.3); }
 </style>

@@ -1,6 +1,8 @@
 # Deckanator
 
-A controller-friendly Minecraft launcher for Steam Deck.
+The only controller-friendly Minecraft launcher for Steam Deck.
+
+<img width="1392" height="944" alt="Screenshot 2026-04-15 at 06 06 10" src="https://github.com/user-attachments/assets/dcd30f6c-7f7a-4180-844c-7c2d6fc5309e" />
 
 ## Install on Steam Deck
 

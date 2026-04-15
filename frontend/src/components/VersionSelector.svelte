@@ -12,6 +12,12 @@
 
   const dispatch = createEventDispatcher()
 
+  let mcSel, fabricSel, javaSel
+
+  export function focusMC()     { mcSel?.focus() }
+  export function focusFabric() { fabricSel?.focus() }
+  export function focusJava()   { javaSel?.focus() }
+
   $: mcOptions     = mcVersions.map(v => ({ value: v.id, label: v.id }))
   $: fabricOptions = fabricVersions.map(v => ({ value: v.version, label: v.version }))
   $: javaOptions   = javaOptionsForMC(selectedMC)
@@ -61,6 +67,7 @@
       <span class="val-locked">{selectedMC || '—'}</span>
     {:else}
       <SteamSelect
+        bind:this={mcSel}
         value={selectedMC}
         options={mcOptions}
         disabled={mcVersions.length === 0}
@@ -76,6 +83,7 @@
         <span class="val-locked">{selectedFabric || '—'}</span>
       {:else}
         <SteamSelect
+          bind:this={fabricSel}
           value={selectedFabric}
           options={fabricOptions}
           disabled={fabricVersions.length === 0}
@@ -91,6 +99,7 @@
       <span class="val-locked">{javaLabel || '—'}</span>
     {:else}
       <SteamSelect
+        bind:this={javaSel}
         value={selectedJava}
         options={javaOptions}
         disabled={javaOptions.length === 0}

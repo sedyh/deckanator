@@ -10,6 +10,9 @@
 
   const dispatch = createEventDispatcher()
 
+  let btnEl
+  export function focus() { btnEl?.focus() }
+
   $: pct   = progress.total > 0 ? Math.round(progress.current * 100 / progress.total) : 0
   $: label = installing
     ? (progress.stage || 'Installing...')
@@ -19,6 +22,7 @@
 
 <div class="wrap">
   <button
+    bind:this={btnEl}
     class="btn"
     class:play={installed && !installing && !launching}
     class:launching
@@ -81,7 +85,7 @@
   }
 
   .btn:not(:disabled):focus-visible {
-    box-shadow: 0 0 0 2px rgba(30,143,255,0.3);
+    box-shadow: inset 0 0 0 2px var(--accent);
     outline: none;
   }
 

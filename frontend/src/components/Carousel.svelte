@@ -1,6 +1,6 @@
 <script>
   import { createEventDispatcher, onMount, onDestroy } from 'svelte'
-  import { IconSettings, IconTrash, IconFolder, GlyphA, GlyphB, GlyphX, GlyphDPadV } from '../lib/icons.js'
+  import { IconSettings, IconTrash, IconFolder } from '../lib/icons.js'
   import { OpenProfileDir } from '../../wailsjs/go/internal/App.js'
 
   export let profiles = []
@@ -13,9 +13,24 @@
 
   const dispatch = createEventDispatcher()
 
-  // mode: 'nav' | 'action' | 'edit'
-  let mode = 'nav'
+  export let mode = 'nav'
   let actionIdx = 0   // 0=files, 1=rename, 2=delete
+
+  let carouselEl
+
+  export function navigateLeft(keepAction = false) {
+    if (selectedIndex > 0) { selectedIndex--; mode = keepAction ? 'action' : 'nav' }
+  }
+  export function navigateRight(keepAction = false) {
+    if (selectedIndex < profiles.length - 1) { selectedIndex++; mode = keepAction ? 'action' : 'nav' }
+  }
+  export function focusCarousel() { carouselEl?.focus() }
+  export function enterAction()   {
+    if (!profile) return
+    carouselEl?.focus()
+    mode = 'action'
+    actionIdx = 2
+  }
   let editValue = ''
 
   const iconMap = {}
@@ -41,11 +56,15 @@
 
   function commitEdit() {
     if (profile && editValue.trim()) dispatch('save', { ...profile, name: editValue.trim() })
-    mode = 'nav'
+    mode = 'action'
+    actionIdx = 1
+    carouselEl?.focus()
   }
 
   function cancelEdit() {
-    mode = 'nav'
+    mode = 'action'
+    actionIdx = 1
+    carouselEl?.focus()
   }
 
   function deleteProfile() {
@@ -88,36 +107,30 @@
   })
 
   function handleKeydown(e) {
-    if (mode === 'edit') {
-      if (e.key === 'Enter')  { e.preventDefault(); commitEdit() }
-      if (e.key === 'Escape') { e.preventDefault(); cancelEdit() }
-      return
-    }
+    if (mode === 'edit') return  // input handles Enter/Escape with stopPropagation
 
     if (mode === 'action') {
-      if (e.key === 'ArrowUp')   { e.preventDefault(); actionIdx = Math.max(0, actionIdx - 1) }
-      if (e.key === 'ArrowDown') { e.preventDefault(); actionIdx = Math.min(2, actionIdx + 1) }
+      if (e.key === 'ArrowUp')   { e.preventDefault(); e.stopPropagation(); actionIdx = Math.max(0, actionIdx - 1) }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault(); e.stopPropagation()
+        if (actionIdx < 2) { actionIdx++ }
+        else { mode = 'nav'; dispatch('enterPanel') }
+      }
       if (e.key === 'Enter') {
-        e.preventDefault()
+        e.preventDefault(); e.stopPropagation()
         if (actionIdx === 0) profile && OpenProfileDir(profile.id)
         else if (actionIdx === 1) startEdit()
         else deleteProfile()
       }
-      if (e.key === 'Escape') { e.preventDefault(); mode = 'nav' }
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); mode = 'nav' }
       return
     }
 
-    // mode === 'nav'
-    if (e.key === 'ArrowLeft')  { e.preventDefault(); if (selectedIndex > 0) selectedIndex-- }
-    if (e.key === 'ArrowRight') { e.preventDefault(); if (selectedIndex < profiles.length - 1) selectedIndex++ }
-    if (e.key === 'Enter' && profile) { e.preventDefault(); enterActionMode() }
+    // nav mode: only Enter is handled here; ArrowLeft/Right/Up/Down bubble to App's global handler
+    if (e.key === 'Enter' && profile) { e.preventDefault(); e.stopPropagation(); enterActionMode() }
   }
 
-  $: hints = mode === 'edit'
-    ? [{ glyph: null, key: 'Enter', label: 'Save' }, { glyph: GlyphB, label: 'Cancel' }]
-    : mode === 'action'
-    ? [{ glyph: GlyphDPadV, label: 'Navigate' }, { glyph: actionIdx === 2 ? GlyphX : GlyphA, label: actionIdx === 0 ? 'Files' : actionIdx === 1 ? 'Rename' : 'Delete' }, { glyph: GlyphB, label: 'Back' }]
-    : []
+  $: hints = []
 </script>
 
 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
@@ -126,6 +139,7 @@
   class="carousel"
   tabindex="0"
   role="listbox"
+  bind:this={carouselEl}
   on:keydown={handleKeydown}
 >
   <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -146,7 +160,7 @@
           class:adjacent={isAdjacent}
           style="
             transform: translateX({offset * 13.89}rem) scale({isActive ? 1 : 0.82}) translateZ(0);
-            opacity: {isActive ? 1 : Math.abs(offset) === 1 ? 0.4 : 0.1};
+            opacity: {isActive ? 1 : Math.abs(offset) === 1 ? 0.4 : 0};
             z-index: {10 - Math.abs(offset)};
             pointer-events: {isActive || isAdjacent ? 'auto' : 'none'};
           "
@@ -270,22 +284,6 @@
     {/each}
   </div>
 
-  {#if hints.length > 0}
-    <div class="hints-row">
-      {#each hints as h}
-        <span class="hint">
-          <span class="glyph">
-            {#if h.glyph}
-              {@html h.glyph}
-            {:else}
-              <kbd class="key-enter">{h.key}</kbd>
-            {/if}
-          </span>
-          <span>{h.label}</span>
-        </span>
-      {/each}
-    </div>
-  {/if}
 </div>
 
 <style>
@@ -326,7 +324,6 @@
     color: var(--text);
     height: 1.11rem;
     white-space: nowrap;
-    overflow: hidden;
     width: 13.33rem;
     display: flex;
     align-items: center;
@@ -353,9 +350,12 @@
     font-weight: 700;
     background: transparent;
     color: var(--text);
-    border-bottom: 1px solid var(--accent);
+    border: none;
+    outline: none;
+    border-bottom: 2px solid var(--accent);
     width: 100%;
     padding: 0 0 0.11rem;
+    caret-color: var(--accent);
   }
 
   .card {
@@ -425,10 +425,10 @@
     transition: background var(--t), color var(--t), font-weight var(--t);
     white-space: nowrap;
   }
-  .action-btn:hover,
-  .action-btn.focused { background: rgba(255,255,255,0.16); color: var(--text); font-weight: 700; }
-  .action-btn.danger:hover,
-  .action-btn.danger.focused { background: rgba(217,95,95,0.12); color: var(--red); font-weight: 700; }
+  .action-btn:hover { background: rgba(255,255,255,0.16); color: var(--text); font-weight: 700; }
+  .action-btn.focused { background: rgba(255,255,255,0.16); color: var(--text); font-weight: 700; box-shadow: inset 0 0 0 2px var(--accent); }
+  .action-btn.danger:hover { background: rgba(217,95,95,0.12); color: var(--red); font-weight: 700; }
+  .action-btn.danger.focused { background: rgba(217,95,95,0.12); color: var(--red); font-weight: 700; box-shadow: inset 0 0 0 2px var(--accent); }
 
   .btn-icon {
     display: flex;
@@ -459,48 +459,6 @@
     transform: scale(1.5);
   }
 
-  /* ── Hints ── */
-  .hints-row {
-    display: flex;
-    align-items: center;
-    gap: 0.78rem;
-    min-height: 1.2rem;
-  }
-
-  .hint {
-    display: flex;
-    align-items: center;
-    gap: 0.33rem;
-    font-size: 0.61rem;
-    color: var(--text-sub);
-  }
-
-  .glyph {
-    display: inline-flex;
-    align-items: center;
-    height: 1.1rem;
-    flex-shrink: 0;
-  }
-  .glyph :global(svg) {
-    height: 1.1rem;
-    width: auto;
-  }
-
-  .key-enter {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    height: 1.1rem;
-    padding: 0 0.33rem;
-    border-radius: 0.2rem;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.14);
-    font-family: inherit;
-    font-size: 0.5rem;
-    font-weight: 700;
-    color: var(--text-sub);
-    white-space: nowrap;
-  }
 
   .empty-state {
     color: var(--text-sub);
