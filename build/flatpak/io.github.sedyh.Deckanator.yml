@@ -11,6 +11,7 @@ finish-args:
   - --socket=wayland
   - --filesystem=home
   - --device=dri
+  - --env=GST_PLUGIN_FEATURE_RANK=openh264enc:NONE,openh264dec:NONE
 
 modules:
   - name: deckanator
