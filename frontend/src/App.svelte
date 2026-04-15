@@ -1,5 +1,5 @@
 <script>
-  import { onMount, onDestroy } from 'svelte'
+  import { onMount, onDestroy, tick } from 'svelte'
   import { EventsOn } from '../wailsjs/runtime/runtime.js'
   import {
     GetProfiles, CreateProfile, SaveProfile, DeleteProfile, GetIcons,
@@ -22,7 +22,9 @@
   let versionSelRef
   let actionBtnRef
 
-  let panelIdx = -1  // -1 = carousel, 0=new-profile, 1=mc, 2=fabric, 3=java, 4=run
+  let panelIdx     = -1  // -1 = carousel, 0=new-profile, 1=mc, 2=fabric, 3=java, 4=run
+  let lastFocus    = { mode: 'none', idx: -1 }  // { mode: 'action'|'panel'|'none', idx }
+  let suppressBlur = false
 
   const loader = 'fabric'
   let mcVersions          = []
@@ -187,7 +189,7 @@
   async function checkAllInstalled() {
     const results = await Promise.all(profiles.map(async p => {
       if (!p.mcVersion) return [p.id, false]
-      const ok = await IsInstalled(loader, p.mcVersion, loader === 'fabric' ? p.fabricLoaderVersion : '')
+      const ok = await IsInstalled(p.loader, p.mcVersion, p.loader === 'fabric' ? p.fabricLoaderVersion : '')
       return [p.id, ok]
     }))
     installedMap = Object.fromEntries(results)
@@ -279,6 +281,13 @@
 
   $: focusableItems = buildFocusableItems(locked, loader)
 
+  let _prevCarouselMode = carouselMode
+  $: {
+    if (carouselMode === 'action') lastFocus = { mode: 'action', idx: -1 }
+    else if (_prevCarouselMode === 'action') lastFocus = { mode: 'none', idx: -1 }
+    _prevCarouselMode = carouselMode
+  }
+
   $: if (focusableItems && panelIdx >= 0) {
     const item = focusableItems.find(i => i.idx === panelIdx)
     if (item) {
@@ -311,12 +320,14 @@
     }
     if (next >= focusableItems.length) return
     panelIdx = focusableItems[next].idx
+    lastFocus = { mode: 'panel', idx: panelIdx }
     focusableItems[next].focus()
   }
 
   function handleEnterPanel() {
     if (focusableItems.length > 0) {
       panelIdx = focusableItems[0].idx
+      lastFocus = { mode: 'panel', idx: panelIdx }
       focusableItems[0].focus()
     }
   }
@@ -328,9 +339,20 @@
 
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault()
-      const keepAction = carouselMode === 'action'
+      const keepAction = lastFocus.mode === 'action' || carouselMode === 'action'
       if (e.key === 'ArrowLeft') carouselRef?.navigateLeft(keepAction)
       else carouselRef?.navigateRight(keepAction)
+      if (!keepAction && lastFocus.mode === 'panel') {
+        const restoreIdx = lastFocus.idx
+        suppressBlur = true
+        tick().then(() => {
+          const item = focusableItems.find(i => i.idx === restoreIdx)
+          if (item) { panelIdx = restoreIdx; item.focus() }
+          suppressBlur = false
+        })
+      } else if (!keepAction && lastFocus.mode === 'none' && panelIdx === -1) {
+        tick().then(() => carouselRef?.enterAction())
+      }
       return
     }
 
@@ -352,6 +374,7 @@
     if (e.key === 'ArrowUp') {
       e.preventDefault()
       if (panelIdx >= 0) navigatePanelBy(-1)
+      else carouselRef?.enterAction(1)
       return
     }
 
@@ -391,6 +414,7 @@
           class="new-profile-btn"
           class:panel-focused={panelIdx === 0}
           on:click={handleCreate}
+          on:blur={() => { if (!suppressBlur && panelIdx === 0) { lastFocus = { mode: 'panel', idx: 0 }; panelIdx = -1 } }}
           tabindex="-1"
         >
           <span class="new-profile-icon">{@html IconPlus}</span>
@@ -539,12 +563,13 @@
     transition: background var(--t), color var(--t), font-weight var(--t);
   }
   .new-profile-btn:hover,
+  .new-profile-btn:focus,
   .new-profile-btn.panel-focused {
     background: var(--card-btn-hover);
     color: var(--text);
     font-weight: 700;
   }
-  .new-profile-btn:focus-visible {
+  .new-profile-btn:focus {
     outline: none;
     box-shadow: inset 0 0 0 2px var(--accent);
   }

@@ -76,7 +76,7 @@
     display: flex;
   }
 
-  .seg:focus-visible {
+  .seg:focus {
     outline: none;
   }
 

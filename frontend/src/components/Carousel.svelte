@@ -25,11 +25,11 @@
     if (selectedIndex < profiles.length - 1) { selectedIndex++; mode = keepAction ? 'action' : 'nav' }
   }
   export function focusCarousel() { carouselEl?.focus() }
-  export function enterAction()   {
+  export function enterAction(idx = 2) {
     if (!profile) return
     carouselEl?.focus()
     mode = 'action'
-    actionIdx = 2
+    actionIdx = idx
   }
   let editValue = ''
 
@@ -99,11 +99,19 @@
     if (e.deltaX < 0 && selectedIndex > 0)                   { selectedIndex--; mode = 'nav' }
   }
 
+  function handleMousedown(e) {
+    if (mode === 'action' && carouselEl && !carouselEl.contains(e.target)) {
+      mode = 'nav'
+    }
+  }
+
   onMount(() => {
     window.addEventListener('wheel', handleWheel, { passive: false })
+    window.addEventListener('mousedown', handleMousedown)
   })
   onDestroy(() => {
     window.removeEventListener('wheel', handleWheel)
+    window.removeEventListener('mousedown', handleMousedown)
   })
 
   function handleKeydown(e) {

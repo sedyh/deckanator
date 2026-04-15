@@ -165,7 +165,7 @@
     transition: background var(--t), font-weight var(--t);
   }
   .trigger:hover { background: var(--card-btn-hover); font-weight: 700; }
-  .trigger:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+  .trigger:focus { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
   .trigger:disabled { opacity: 0.35; cursor: default; }
 
   .val {

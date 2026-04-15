@@ -81,7 +81,7 @@
     -webkit-text-stroke: 0.04em currentColor;
   }
 
-  .btn:not(:disabled):focus-visible {
+  .btn:not(:disabled):focus {
     box-shadow: inset 0 0 0 2px var(--accent);
     outline: none;
   }
@@ -92,7 +92,7 @@
     box-shadow: 0 2px 20px rgba(30,143,255,0.3);
   }
   .btn.play:not(:disabled):hover,
-  .btn.play:not(:disabled):focus-visible {
+  .btn.play:not(:disabled):focus {
     background: var(--accent-dim);
     box-shadow: inset 0 0 0 2px #fff, 0 2px 20px rgba(30,143,255,0.3);
     -webkit-text-stroke: 0.04em currentColor;

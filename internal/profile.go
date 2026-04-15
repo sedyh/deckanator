@@ -74,13 +74,52 @@ func DeleteProfile(id string) error {
 	if err != nil {
 		return err
 	}
+
+	var deleted Profile
 	filtered := make([]Profile, 0, len(profiles))
 	for _, p := range profiles {
 		if p.ID != id {
 			filtered = append(filtered, p)
+		} else {
+			deleted = p
 		}
 	}
-	return writeProfiles(filtered)
+
+	if err := writeProfiles(filtered); err != nil {
+		return err
+	}
+
+	if len(filtered) == 0 {
+		return CleanGameData()
+	}
+
+	os.RemoveAll(filepath.Join(GameDir(), "profiles", id))
+
+	if deleted.MCVersion == "" {
+		return nil
+	}
+
+	mcUsed := false
+	fabricUsed := false
+	for _, p := range filtered {
+		if p.MCVersion == deleted.MCVersion {
+			mcUsed = true
+			if p.Loader == "fabric" && p.FabricLoaderVersion == deleted.FabricLoaderVersion {
+				fabricUsed = true
+			}
+		}
+	}
+
+	dir := GameDir()
+	if deleted.Loader == "fabric" && deleted.FabricLoaderVersion != "" && !fabricUsed {
+		fabricID := fabricProfileID(deleted.MCVersion, deleted.FabricLoaderVersion)
+		os.RemoveAll(filepath.Join(dir, "versions", fabricID))
+	}
+	if !mcUsed {
+		os.RemoveAll(filepath.Join(dir, "versions", deleted.MCVersion))
+	}
+
+	return nil
 }
 
 func CreateProfile() Profile {
