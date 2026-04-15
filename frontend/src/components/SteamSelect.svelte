@@ -1,5 +1,5 @@
 <script>
-  import { createEventDispatcher, onDestroy } from 'svelte'
+  import { createEventDispatcher, onDestroy, tick } from 'svelte'
 
   export let value = ''
   export let options = []
@@ -188,9 +188,9 @@
   .list {
     position: absolute;
     top: 100%;
-    right: 0;
+    left: 0;
     z-index: 100;
-    min-width: 100%;
+    width: 100%;
     max-height: calc(4 * 1.67rem);
     overflow-y: auto;
     background: #1a1d2b;

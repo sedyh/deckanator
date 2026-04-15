@@ -122,6 +122,12 @@
     align-items: center;
     justify-content: space-between;
     padding: 0.33rem 0;
+    gap: 0.5rem;
+  }
+
+  .row :global(.wrap) {
+    width: 9rem;
+    flex-shrink: 0;
   }
 
   .row-label {
