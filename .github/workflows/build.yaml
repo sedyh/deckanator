@@ -1,0 +1,110 @@
+name: Build
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    name: Linux (Steam Deck)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev \
+            pkg-config \
+            build-essential
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Build
+        run: wails build -platform linux/amd64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deckanator-linux-amd64
+          path: build/bin/Deckanator
+
+  build-mac:
+    name: macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Build
+        env:
+          MACOSX_DEPLOYMENT_TARGET: '10.13'
+          CGO_LDFLAGS: '-framework CoreFoundation -framework AppKit -framework UniformTypeIdentifiers'
+        run: wails build -platform darwin/amd64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deckanator-macos
+          path: build/bin/Deckanator.app
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: [build-linux, build-mac]
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Linux binary
+        uses: actions/download-artifact@v4
+        with:
+          name: deckanator-linux-amd64
+          path: dist/
+
+      - name: Download macOS app
+        uses: actions/download-artifact@v4
+        with:
+          name: deckanator-macos
+          path: dist/macos/
+
+      - name: Package macOS app
+        run: |
+          cd dist/macos
+          zip -r ../deckanator-macos.zip Deckanator.app
+
+      - name: Rename Linux binary
+        run: mv dist/Deckanator dist/deckanator-linux-amd64
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/deckanator-linux-amd64
+            dist/deckanator-macos.zip
+            install.sh
+          generate_release_notes: true

@@ -1,0 +1,104 @@
+@font-face {
+  font-family: 'MotivaSans';
+  src: url('./assets/fonts/MotivaSans-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'MotivaSans';
+  src: url('./assets/fonts/MotivaSans-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'MotivaSans';
+  src: url('./assets/fonts/MotivaSans-RegularItalic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'MotivaSans';
+  src: url('./assets/fonts/MotivaSans-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'MotivaSans';
+  src: url('./assets/fonts/MotivaSans-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg:        #000000;
+  --card:      #2a2d3d;
+  --card-btn:      #1e2030;
+  --card-btn-hover:#32364a;
+  --card-sep:  #3a3d50;
+  --accent:    #1e8fff;
+  --accent-dim:#1570cc;
+  --text:      #ffffff;
+  --text-sub:  #8b9bbf;
+  --text-dim:  #404868;
+  --red:       #d95f5f;
+  --green:     #59c173;
+  --radius:    0px;
+  --t:         150ms ease;
+}
+
+html {
+  font-size: 24px;
+}
+
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'MotivaSans', -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+:focus        { outline: none }
+:focus-visible { outline: none }
+
+button {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: none;
+}
+
+input {
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  appearance: none;
+  outline: none;
+}
+select option { background: #1a1c28; }

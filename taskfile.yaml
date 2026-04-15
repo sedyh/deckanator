@@ -1,0 +1,32 @@
+version: '3'
+
+tasks:
+  build:mac:
+    desc: Build for macOS
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '10.13'
+      CGO_LDFLAGS: '-framework CoreFoundation -framework AppKit -framework UniformTypeIdentifiers'
+    cmds:
+      - wails build -platform darwin/amd64
+
+  build:linux:
+    desc: Build for Linux / Steam Deck (amd64)
+    cmds:
+      - wails build -platform linux/amd64
+
+  build:windows:
+    desc: Build for Windows (amd64)
+    cmds:
+      - wails build -platform windows/amd64 -nsis
+
+  build:all:
+    desc: Build for all platforms
+    cmds:
+      - task: build:mac
+      - task: build:linux
+      - task: build:windows
+
+  clean:
+    desc: Remove build artifacts
+    cmds:
+      - rm -rf build/bin
