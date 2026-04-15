@@ -252,19 +252,36 @@ func addToShortcuts(steamDir, userID, exeField, launchOptions, startDir, iconPat
 		}
 	}
 
-	// remove existing entry by AppName, then append fresh - avoids stale field values
+	// remove all entries that look like ours - by AppName or by Exe pointing to our binary/flatpak
+	isOurs := func(e *node) bool {
+		if e == nil {
+			return false
+		}
+		if n := e.sub["AppName"]; n != nil && strings.EqualFold(n.str, appName) {
+			return true
+		}
+		if n := e.sub["Exe"]; n != nil {
+			exe := strings.Trim(n.str, "\"")
+			if strings.Contains(exe, "deckanator") || strings.Contains(exe, "Deckanator") ||
+				(exe == "/usr/bin/flatpak" && func() bool {
+					lo := e.sub["LaunchOptions"]
+					return lo != nil && strings.Contains(lo.str, flatpakAppID)
+				}()) {
+				return true
+			}
+		}
+		return false
+	}
 	maxIdx := -1
-	newOrder := shortcuts.order[:0]
+	newOrder := make([]string, 0, len(shortcuts.order))
 	for _, k := range shortcuts.order {
 		idx, _ := strconv.Atoi(k)
 		if idx > maxIdx {
 			maxIdx = idx
 		}
-		if e := shortcuts.sub[k]; e != nil {
-			if nameNode := e.sub["AppName"]; nameNode != nil && nameNode.str == appName {
-				delete(shortcuts.sub, k)
-				continue
-			}
+		if isOurs(shortcuts.sub[k]) {
+			delete(shortcuts.sub, k)
+			continue
 		}
 		newOrder = append(newOrder, k)
 	}
