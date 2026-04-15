@@ -113,8 +113,9 @@ jobs:
 
       - name: Prepare sources
         run: |
+          sudo apt-get install -y imagemagick
           cp dist/Deckanator build/flatpak/Deckanator
-          cp build/appicon.png build/flatpak/icon.png
+          convert build/appicon.png -resize 512x512 build/flatpak/icon.png
 
       - name: Build Flatpak
         run: |
