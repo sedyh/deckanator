@@ -59,9 +59,9 @@
     const listTop    = listEl.scrollTop
     const listBottom = listTop + listEl.clientHeight
     if (itemTop < listTop) {
-      listEl.scrollTo({ top: itemTop, behavior: 'smooth' })
+      listEl.scrollTop = itemTop
     } else if (itemBottom > listBottom) {
-      listEl.scrollTo({ top: itemBottom - listEl.clientHeight, behavior: 'smooth' })
+      listEl.scrollTop = itemBottom - listEl.clientHeight
     }
   }
 
