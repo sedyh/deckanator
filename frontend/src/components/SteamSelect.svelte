@@ -1,5 +1,5 @@
 <script>
-  import { createEventDispatcher, onDestroy, tick } from 'svelte'
+  import { createEventDispatcher, onDestroy } from 'svelte'
 
   export let value = ''
   export let options = []
@@ -50,8 +50,7 @@
     dispatch('change', v)
   }
 
-  async function scrollToHighlighted() {
-    await tick()
+  function scrollToHighlighted() {
     const item = itemEls[highlightedIdx]
     if (!item || !listEl) return
     const itemTop    = item.offsetTop
@@ -207,19 +206,20 @@
   }
 
   .item {
-    display: block;
+    display: flex;
+    align-items: center;
     width: 100%;
-    padding: 0.44rem 0.78rem;
+    height: 1.67rem;
+    padding: 0 0.78rem;
     font-size: 0.78rem;
-    font-weight: 400;
+    font-weight: 700;
     color: var(--text-sub);
     text-align: left;
     background: transparent;
-    transition: background var(--t), color var(--t), font-weight var(--t);
     white-space: nowrap;
   }
   .item:hover,
-  .item.highlighted { background: rgba(255,255,255,0.14); color: var(--text); font-weight: 700; }
-  .item.active { color: var(--text); background: rgba(30,143,255,0.15); font-weight: 700; }
+  .item.highlighted { background: rgba(255,255,255,0.14); color: var(--text); }
+  .item.active { color: var(--text); background: rgba(30,143,255,0.15); }
   .item.active.highlighted { background: rgba(30,143,255,0.3); }
 </style>
