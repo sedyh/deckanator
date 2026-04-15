@@ -12,17 +12,29 @@ Open a terminal in Desktop Mode (Konsole) and run:
 curl -fsSL https://github.com/sedyh/deckanator/releases/latest/download/install.sh | bash
 ```
 
-Or install a specific version:
+The installer will:
+- Download and install the Deckanator binary to `~/.local/share/deckanator/`
+- Create a `.desktop` entry
+- Add Deckanator to Steam with artwork (shortcuts.vdf)
 
-```bash
-curl -fsSL https://github.com/sedyh/deckanator/releases/download/v1.0.0/install.sh | bash -s v1.0.0
-```
-
-After install, add to Steam: **Games -> Add a Non-Steam Game -> Browse** and select `~/.local/share/deckanator/Deckanator`.
+Restart Steam after install to see Deckanator in your library.
 
 ## Update
 
-Re-run the install command - it overwrites the existing binary.
+Re-run the install command - existing Steam artwork is preserved.
+
+## Steam Artwork
+
+Artwork files are in `cmd/installer/assets/`:
+
+| File | Size | Usage |
+|------|------|-------|
+| `grid.png` | 460x215 | Library horizontal capsule |
+| `poster.png` | 600x900 | Library vertical capsule |
+| `hero.png` | 1920x620 | Game detail hero banner |
+| `icon.png` | any | Icon / logo |
+
+Replace these files before building to use custom artwork.
 
 ## Build
 

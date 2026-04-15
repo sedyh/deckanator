@@ -64,16 +64,38 @@ jobs:
           CGO_LDFLAGS: '-framework CoreFoundation -framework AppKit -framework UniformTypeIdentifiers'
         run: wails build -platform darwin/amd64
 
+      - name: Package macOS app
+        run: hdiutil create -volname Deckanator -srcfolder build/bin/Deckanator.app -ov -format UDZO deckanator-macos.dmg
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: deckanator-macos
-          path: build/bin/Deckanator.app
+          path: deckanator-macos.dmg
+
+  build-installer:
+    name: Installer (Linux)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build installer
+        run: GOOS=linux GOARCH=amd64 go build -o deckanator-installer-linux-amd64 ./cmd/installer/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deckanator-installer-linux-amd64
+          path: deckanator-installer-linux-amd64
 
   release:
     name: Release
     runs-on: ubuntu-latest
-    needs: [build-linux, build-mac]
+    needs: [build-linux, build-mac, build-installer]
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
@@ -90,12 +112,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: deckanator-macos
-          path: dist/macos/
+          path: dist/
 
-      - name: Package macOS app
-        run: |
-          cd dist/macos
-          zip -r ../deckanator-macos.zip Deckanator.app
+      - name: Download installer
+        uses: actions/download-artifact@v4
+        with:
+          name: deckanator-installer-linux-amd64
+          path: dist/
 
       - name: Rename Linux binary
         run: mv dist/Deckanator dist/deckanator-linux-amd64
@@ -105,6 +128,6 @@ jobs:
         with:
           files: |
             dist/deckanator-linux-amd64
-            dist/deckanator-macos.zip
-            install.sh
+            dist/deckanator-macos.dmg
+            dist/deckanator-installer-linux-amd64
           generate_release_notes: true
