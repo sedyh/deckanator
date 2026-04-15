@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte'
+  import { onMount, onDestroy } from 'svelte'
   import { EventsOn } from '../wailsjs/runtime/runtime.js'
   import {
     GetProfiles, CreateProfile, SaveProfile, DeleteProfile, GetIcons,
@@ -69,6 +69,61 @@
     if (!installing && p.mcVersion) await checkInstalled()
   }
 
+  // ── Gamepad polling ──────────────────────────────────────────────────────
+  const BUTTON_MAP = {
+    0:  'Enter',      // A
+    1:  'Escape',     // B
+    12: 'ArrowUp',
+    13: 'ArrowDown',
+    14: 'ArrowLeft',
+    15: 'ArrowRight',
+  }
+  const REPEAT_DELAY = 400
+  const REPEAT_RATE  = 120
+  const STICK_THRESHOLD = 0.5
+
+  let rafId = null
+  const btnState  = {}   // button index → { pressed, repeatAt }
+  const axisState = {}   // 'h'|'v' → last fired key
+
+  function fireKey(key) {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
+  }
+
+  function pollGamepads(now) {
+    for (const gp of navigator.getGamepads()) {
+      if (!gp) continue
+
+      // buttons
+      for (const [idx, key] of Object.entries(BUTTON_MAP)) {
+        const btn = gp.buttons[idx]
+        const pressed = btn?.pressed ?? false
+        const s = btnState[idx] ?? (btnState[idx] = { pressed: false, repeatAt: 0 })
+        if (pressed && !s.pressed) {
+          fireKey(key)
+          s.repeatAt = now + REPEAT_DELAY
+        } else if (pressed && now >= s.repeatAt) {
+          fireKey(key)
+          s.repeatAt = now + REPEAT_RATE
+        }
+        s.pressed = pressed
+      }
+
+      // left stick as d-pad
+      const lx = gp.axes[0] ?? 0
+      const ly = gp.axes[1] ?? 0
+      const hKey = lx < -STICK_THRESHOLD ? 'ArrowLeft' : lx > STICK_THRESHOLD ? 'ArrowRight' : null
+      const vKey = ly < -STICK_THRESHOLD ? 'ArrowUp'   : ly > STICK_THRESHOLD  ? 'ArrowDown'  : null
+      if (hKey !== axisState.h) { axisState.h = hKey; if (hKey) fireKey(hKey) }
+      if (vKey !== axisState.v) { axisState.v = vKey; if (vKey) fireKey(vKey) }
+    }
+    rafId = requestAnimationFrame(pollGamepads)
+  }
+
+  onDestroy(() => { if (rafId) cancelAnimationFrame(rafId) })
+
+  // ─────────────────────────────────────────────────────────────────────────
+
   onMount(async () => {
     EventsOn('install:progress', d => { progress = d; savedProgress = d })
 
@@ -81,6 +136,8 @@
     await loadVersions()
     await checkAllInstalled()
     _prevProfileId = ''
+
+    rafId = requestAnimationFrame(pollGamepads)
   })
 
   async function loadVersions() {
