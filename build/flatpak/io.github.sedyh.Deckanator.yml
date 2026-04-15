@@ -10,7 +10,7 @@ finish-args:
   - --socket=x11
   - --socket=wayland
   - --filesystem=home
-  - --device=dri
+  - --device=all
   - --env=GST_PLUGIN_FEATURE_RANK=openh264enc:NONE,openh264dec:NONE
 
 modules:

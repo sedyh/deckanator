@@ -83,8 +83,9 @@
   const STICK_THRESHOLD = 0.5
 
   let rafId = null
-  const btnState  = {}   // button index → { pressed, repeatAt }
-  const axisState = {}   // 'h'|'v' → last fired key
+  let gamepadCount = 0
+  const btnState  = {}
+  const axisState = {}
 
   function fireKey(key) {
     window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
@@ -94,7 +95,6 @@
     for (const gp of navigator.getGamepads()) {
       if (!gp) continue
 
-      // buttons
       for (const [idx, key] of Object.entries(BUTTON_MAP)) {
         const btn = gp.buttons[idx]
         const pressed = btn?.pressed ?? false
@@ -109,7 +109,6 @@
         s.pressed = pressed
       }
 
-      // left stick as d-pad
       const lx = gp.axes[0] ?? 0
       const ly = gp.axes[1] ?? 0
       const hKey = lx < -STICK_THRESHOLD ? 'ArrowLeft' : lx > STICK_THRESHOLD ? 'ArrowRight' : null
@@ -119,6 +118,22 @@
     }
     rafId = requestAnimationFrame(pollGamepads)
   }
+
+  function startPolling() {
+    if (!rafId) rafId = requestAnimationFrame(pollGamepads)
+  }
+
+  window.addEventListener('gamepadconnected', e => {
+    gamepadCount++
+    startPolling()
+  })
+  window.addEventListener('gamepaddisconnected', e => {
+    gamepadCount = Math.max(0, gamepadCount - 1)
+    if (gamepadCount === 0 && rafId) {
+      cancelAnimationFrame(rafId)
+      rafId = null
+    }
+  })
 
   onDestroy(() => { if (rafId) cancelAnimationFrame(rafId) })
 
@@ -137,7 +152,7 @@
     await checkAllInstalled()
     _prevProfileId = ''
 
-    rafId = requestAnimationFrame(pollGamepads)
+    startPolling()
   })
 
   async function loadVersions() {
