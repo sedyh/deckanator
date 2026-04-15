@@ -47,9 +47,6 @@
         <span class="icon">{@html IconDownload}</span>
       {/if}
       <span class="label">{label}</span>
-      {#if installing}
-        <span class="pct">{pct}%</span>
-      {/if}
     </span>
   </button>
 </div>
@@ -94,8 +91,10 @@
     color: #fff;
     box-shadow: 0 2px 20px rgba(30,143,255,0.3);
   }
-  .btn.play:not(:disabled):hover {
+  .btn.play:not(:disabled):hover,
+  .btn.play:not(:disabled):focus-visible {
     background: var(--accent-dim);
+    box-shadow: inset 0 0 0 2px #fff, 0 2px 20px rgba(30,143,255,0.3);
     -webkit-text-stroke: 0.04em currentColor;
   }
 
@@ -105,7 +104,7 @@
     cursor: default;
   }
 
-  .btn.installing { cursor: default; }
+  .btn.installing { cursor: default; transition: none; }
   .btn:disabled:not(.installing):not(.launching) { opacity: 0.35; cursor: default; }
 
   .bar {
@@ -138,7 +137,6 @@
     font-weight: 600;
     opacity: 0.65;
     line-height: 1;
-    display: inline-flex;
-    align-items: center;
+    align-self: center;
   }
 </style>

@@ -55,8 +55,8 @@
   let _prevProfileId = ''
   $: if (profile && profile.id !== _prevProfileId) {
     _prevProfileId = profile.id
-    installed  = installedMap[profile.id] ?? false
     installing = activeInstallId === profile.id
+    installed  = installing ? false : (installedMap[profile.id] ?? false)
     progress   = installing ? savedProgress : { stage: '', current: 0, total: 100 }
     syncProfile(profile)
   }
@@ -173,6 +173,11 @@
 
   async function checkInstalled() {
     if (!selectedMC) return
+    if (!profile?.mcVersion) {
+      installed = false
+      if (profile) installedMap = { ...installedMap, [profile.id]: false }
+      return
+    }
     checkingInstall = true
     installed = await IsInstalled(loader, selectedMC, loader === 'fabric' ? selectedFabric : '')
     if (profile) installedMap = { ...installedMap, [profile.id]: installed }
