@@ -429,6 +429,29 @@ func downloadFile(url, dst string) error {
 	return os.Rename(tmp, dst)
 }
 
+func ensureWebkit() error {
+	// check if already present
+	out, _ := exec.Command("ldconfig", "-p").Output()
+	if strings.Contains(string(out), "libwebkit2gtk-4.0") {
+		fmt.Println("    already installed")
+		return nil
+	}
+
+	// SteamOS/Arch: disable readonly fs and install via pacman
+	cmds := [][]string{
+		{"sudo", "steamos-readonly", "disable"},
+		{"sudo", "pacman", "-Sy", "--noconfirm", "webkit2gtk"},
+		{"sudo", "steamos-readonly", "enable"},
+	}
+	for _, args := range cmds {
+		if err := exec.Command(args[0], args[1:]...).Run(); err != nil {
+			return fmt.Errorf("%s: %w", args[0], err)
+		}
+	}
+	fmt.Println("    installed webkit2gtk")
+	return nil
+}
+
 func step(n int, msg string) {
 	fmt.Printf("[%d] %s\n", n, msg)
 }
@@ -472,6 +495,13 @@ func main() {
 
 	fmt.Printf("Deckanator installer\n")
 	fmt.Printf("App ID: %d\n\n", appID)
+
+	// 0. System dependencies
+	step(0, "Checking dependencies...")
+	if err := ensureWebkit(); err != nil {
+		fmt.Fprintf(os.Stderr, "    warning: could not install webkit2gtk: %v\n", err)
+		fmt.Fprintln(os.Stderr, "    try manually: sudo steamos-readonly disable && sudo pacman -S --noconfirm webkit2gtk")
+	}
 
 	// 1. Download binary
 	if !*skipDownload {
