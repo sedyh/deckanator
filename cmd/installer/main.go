@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 //go:embed assets/grid.png
@@ -256,6 +257,20 @@ func addToShortcuts(steamDir, userID, exeField, launchOptions, startDir, iconPat
 	// stop Steam before modifying shortcuts.vdf - otherwise Steam overwrites our changes on exit
 	exec.Command("pkill", "-x", "steam").Run()
 	exec.Command("pkill", "-x", "Steam").Run()
+	// wait until Steam process is actually gone (up to 5s)
+	for i := 0; i < 10; i++ {
+		time.Sleep(500 * time.Millisecond)
+		out, _ := exec.Command("pgrep", "-x", "steam").Output()
+		out2, _ := exec.Command("pgrep", "-x", "Steam").Output()
+		if len(out) == 0 && len(out2) == 0 {
+			break
+		}
+		if i == 9 {
+			exec.Command("pkill", "-9", "-x", "steam").Run()
+			exec.Command("pkill", "-9", "-x", "Steam").Run()
+			time.Sleep(500 * time.Millisecond)
+		}
+	}
 
 	shortcuts.set(key, buildShortcut(appID, appName, exeField, startDir, iconPath, launchOptions))
 
