@@ -7,7 +7,7 @@
 
   const dispatch = createEventDispatcher()
   const ITEM_HEIGHT_REM = 1.67
-  const VISIBLE_ITEMS   = 10
+  const VISIBLE_ITEMS   = 4
 
   let open = false
   let triggerEl
@@ -181,7 +181,7 @@
     right: 0;
     z-index: 100;
     min-width: 100%;
-    max-height: calc(10 * 1.67rem);
+    max-height: calc(4 * 1.67rem);
     overflow-y: auto;
     background: #1a1d2b;
     box-shadow: 0 0.44rem 1.78rem rgba(0,0,0,0.7);
