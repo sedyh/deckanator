@@ -406,16 +406,27 @@ func downloadFile(url, dst string) error {
 		return err
 	}
 	defer resp.Body.Close()
+
 	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
 		return err
 	}
-	f, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
+
+	// kill running process before replacing binary ("text file busy")
+	exec.Command("pkill", "-f", dst).Run()
+
+	tmp := dst + ".tmp"
+	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	_, err = io.Copy(f, resp.Body)
-	return err
+	if _, err = io.Copy(f, resp.Body); err != nil {
+		f.Close()
+		os.Remove(tmp)
+		return err
+	}
+	f.Close()
+
+	return os.Rename(tmp, dst)
 }
 
 func step(n int, msg string) {
