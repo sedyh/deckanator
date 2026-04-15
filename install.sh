@@ -20,7 +20,7 @@ FLATPAK_FILE="/tmp/deckanator.flatpak"
 echo "[1] Downloading Flatpak bundle..."
 curl -fsSL "$FLATPAK_URL" -o "$FLATPAK_FILE"
 echo "[1] Installing Flatpak..."
-flatpak install --user --noninteractive --or-update "$FLATPAK_FILE"
+flatpak install --user --noninteractive --no-related --or-update "$FLATPAK_FILE"
 
 # 2. Run installer for Steam integration
 INSTALLER_URL="$BASE/deckanator-installer-linux-amd64"
