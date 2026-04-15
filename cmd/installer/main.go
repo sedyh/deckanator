@@ -622,10 +622,8 @@ func main() {
 		fmt.Println("    done (existing artwork preserved)")
 	}
 
-	// Reload Steam shortcuts without full restart (best-effort)
-	exec.Command("bash", "-c",
-		`if pgrep -x steam > /dev/null; then steam steam://open/games 2>/dev/null; fi`,
-	).Run()
+	// Restart Steam so it picks up the new shortcuts
+	exec.Command("bash", "-c", "nohup steam &>/dev/null &").Start()
 
 	if *useFlatpak {
 		printDone("Run: flatpak run " + flatpakAppID)
