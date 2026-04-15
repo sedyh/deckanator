@@ -434,26 +434,12 @@ func downloadFile(url, dst string) error {
 }
 
 func ensureWebkit() error {
-	// check if already present
 	out, _ := exec.Command("ldconfig", "-p").Output()
-	if strings.Contains(string(out), "libwebkit2gtk-4.0") {
-		fmt.Println("    already installed")
+	if strings.Contains(string(out), "libwebkit2gtk-4.1") {
+		fmt.Println("    found")
 		return nil
 	}
-
-	// SteamOS/Arch: disable readonly fs and install via pacman
-	cmds := [][]string{
-		{"sudo", "steamos-readonly", "disable"},
-		{"sudo", "pacman", "-Sy", "--noconfirm", "webkit2gtk"},
-		{"sudo", "steamos-readonly", "enable"},
-	}
-	for _, args := range cmds {
-		if err := exec.Command(args[0], args[1:]...).Run(); err != nil {
-			return fmt.Errorf("%s: %w", args[0], err)
-		}
-	}
-	fmt.Println("    installed webkit2gtk")
-	return nil
+	return fmt.Errorf("libwebkit2gtk-4.1 not found - install webkit2gtk-4.1 manually")
 }
 
 func step(n int, msg string) {
@@ -515,7 +501,7 @@ func main() {
 		// 0. System dependencies (only needed for direct binary)
 		step(0, "Checking dependencies...")
 		if err := ensureWebkit(); err != nil {
-			fmt.Fprintf(os.Stderr, "    warning: libwebkit2gtk-4.0 not found\n")
+			fmt.Fprintf(os.Stderr, "    warning: %v\n", err)
 			fmt.Fprintln(os.Stderr, "    try manually: sudo steamos-readonly disable && sudo pacman -S --noconfirm webkit2gtk")
 		}
 	}
@@ -583,7 +569,11 @@ func main() {
 			fmt.Fprintf(os.Stderr, "    warning: %v\n", err)
 		}
 	}
-	writeDesktop("Deckanator", "deckanator.desktop", binPath, "Minecraft launcher for Steam Deck")
+	launchExec := binPath
+	if *useFlatpak {
+		launchExec = "flatpak run " + flatpakAppID
+	}
+	writeDesktop("Deckanator", "deckanator.desktop", launchExec, "Minecraft launcher for Steam Deck")
 	writeDesktop("Uninstall Deckanator", "deckanator-uninstall.desktop",
 		installerPath+" --uninstall", "Remove Deckanator and Steam shortcut")
 
@@ -591,14 +581,14 @@ func main() {
 	step(4, "Looking for Steam...")
 	if steamDir == "" {
 		fmt.Println("    Steam not found - skipping Steam integration")
-		printDone(binPath)
+		printDone("")
 		return
 	}
 	fmt.Printf("    found: %s\n", steamDir)
 
 	if userID == "" {
 		fmt.Println("    no Steam users found - skipping Steam integration")
-		printDone(binPath)
+		printDone("")
 		return
 	}
 	fmt.Printf("    user: %s\n", userID)
@@ -622,11 +612,18 @@ func main() {
 		`if pgrep -x steam > /dev/null; then steam steam://open/games 2>/dev/null; fi`,
 	).Run()
 
-	printDone(binPath)
+	if *useFlatpak {
+		printDone("Run: flatpak run " + flatpakAppID)
+	} else {
+		printDone("Binary: " + binPath)
+	}
 }
 
-func printDone(binPath string) {
-	fmt.Printf("\nDone!\n")
-	fmt.Printf("Binary: %s\n", binPath)
-	fmt.Printf("Restart Steam to see Deckanator in your library.\n")
+func printDone(info string) {
+	fmt.Println()
+	fmt.Println("Done!")
+	if info != "" {
+		fmt.Println(info)
+	}
+	fmt.Println("Restart Steam to see Deckanator in your library.")
 }
