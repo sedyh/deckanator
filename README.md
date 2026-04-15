@@ -36,6 +36,12 @@ Artwork files are in `cmd/installer/assets/`:
 
 Replace these files before building to use custom artwork.
 
+## Donate
+
+TON - `UQAtK6y7S4kZNWVssNaoma3oD9WD0st7Nh2KmRRcXCHgaczd`
+
+USDT TRC20 - `TDgzdVPub2tgUSvhhnLHoTagSpyhk7f179`
+
 ## Build
 
 Requires [Go](https://go.dev) and [Wails](https://wails.io).
