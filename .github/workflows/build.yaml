@@ -130,4 +130,5 @@ jobs:
             dist/deckanator-linux-amd64
             dist/deckanator-macos.dmg
             dist/deckanator-installer-linux-amd64
+            install.sh
           generate_release_notes: true
