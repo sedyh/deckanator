@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Deckanator
+Comment=Minecraft launcher for Steam Deck
+Exec=Deckanator
+Icon=io.github.sedyh.Deckanator
+Type=Application
+Categories=Game;
+StartupNotify=false

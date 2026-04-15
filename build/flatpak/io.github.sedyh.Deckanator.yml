@@ -1,0 +1,28 @@
+app-id: io.github.sedyh.Deckanator
+runtime: org.gnome.Platform
+runtime-version: '44'
+sdk: org.gnome.Sdk
+command: Deckanator
+
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --filesystem=home
+  - --device=dri
+
+modules:
+  - name: deckanator
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 Deckanator /app/bin/Deckanator
+      - install -Dm644 icon.png /app/share/icons/hicolor/256x256/apps/io.github.sedyh.Deckanator.png
+      - install -Dm644 io.github.sedyh.Deckanator.desktop /app/share/applications/io.github.sedyh.Deckanator.desktop
+    sources:
+      - type: file
+        path: Deckanator
+      - type: file
+        path: icon.png
+      - type: file
+        path: io.github.sedyh.Deckanator.desktop

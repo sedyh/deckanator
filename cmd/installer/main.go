@@ -463,10 +463,13 @@ func fail(msg string, err error) {
 
 // ── Main ───────────────────────────────────────────────────────────────────
 
+const flatpakAppID = "io.github.sedyh.Deckanator"
+
 func main() {
-	version     := flag.String("version", "", "version to install (e.g. v0.2.0), default: latest")
+	version      := flag.String("version", "", "version to install (e.g. v0.2.0), default: latest")
 	skipDownload := flag.Bool("skip-download", false, "skip downloading binary (use existing)")
 	doUninstall  := flag.Bool("uninstall", false, "remove Deckanator and Steam shortcut")
+	useFlatpak   := flag.Bool("flatpak", false, "configure Steam for Flatpak installation")
 	flag.Parse()
 
 	home, err := os.UserHomeDir()
@@ -474,11 +477,14 @@ func main() {
 		fail("home dir", err)
 	}
 
-	binPath := filepath.Join(home, installDir, exeName)
+	binPath  := filepath.Join(home, installDir, exeName)
 	iconPath := filepath.Join(home, installDir, "icon.png")
 
-	// exe field for Steam shortcuts - quoted path
+	// exe field for Steam shortcuts
 	exeField := "\"" + binPath + "\""
+	if *useFlatpak {
+		exeField = "flatpak run " + flatpakAppID
+	}
 	appID := computeAppID(exeField, appName)
 
 	steamDir := findSteamDir(home)
@@ -496,15 +502,17 @@ func main() {
 	fmt.Printf("Deckanator installer\n")
 	fmt.Printf("App ID: %d\n\n", appID)
 
-	// 0. System dependencies
-	step(0, "Checking dependencies...")
-	if err := ensureWebkit(); err != nil {
-		fmt.Fprintf(os.Stderr, "    warning: could not install webkit2gtk: %v\n", err)
-		fmt.Fprintln(os.Stderr, "    try manually: sudo steamos-readonly disable && sudo pacman -S --noconfirm webkit2gtk")
+	if !*useFlatpak {
+		// 0. System dependencies (only needed for direct binary)
+		step(0, "Checking dependencies...")
+		if err := ensureWebkit(); err != nil {
+			fmt.Fprintf(os.Stderr, "    warning: libwebkit2gtk-4.0 not found\n")
+			fmt.Fprintln(os.Stderr, "    try manually: sudo steamos-readonly disable && sudo pacman -S --noconfirm webkit2gtk")
+		}
 	}
 
 	// 1. Download binary
-	if !*skipDownload {
+	if !*useFlatpak && !*skipDownload {
 		step(1, "Fetching release info...")
 		rel, err := fetchRelease(*version)
 		if err != nil {
@@ -529,12 +537,17 @@ func main() {
 			fail("download binary", err)
 		}
 		fmt.Printf("    installed to %s\n", binPath)
-	} else {
+	} else if !*useFlatpak {
 		step(1, fmt.Sprintf("Skipping download, using %s", binPath))
+	} else {
+		step(1, "Using Flatpak installation")
 	}
 
-	// 2. Icon
+	// 2. Icon (always install for Steam artwork)
 	step(2, "Installing icon...")
+	if err := os.MkdirAll(filepath.Dir(iconPath), 0755); err != nil {
+		fail("create install dir", err)
+	}
 	if err := os.WriteFile(iconPath, artIcon, 0644); err != nil {
 		fail("write icon", err)
 	}
