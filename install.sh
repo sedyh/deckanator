@@ -18,3 +18,9 @@ chmod +x "$INSTALLER"
 
 echo "Running installer..."
 "$INSTALLER" --version "$TAG"
+
+BIN="$HOME/.local/share/deckanator/Deckanator"
+if [ -x "$BIN" ]; then
+  echo "Launching Deckanator..."
+  nohup "$BIN" >/dev/null 2>&1 &
+fi
