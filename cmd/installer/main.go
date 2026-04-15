@@ -252,21 +252,27 @@ func addToShortcuts(steamDir, userID, exeField, launchOptions, startDir, iconPat
 		}
 	}
 
-	// remove all entries that look like ours - by AppName or by Exe pointing to our binary/flatpak
+	// remove all entries that look like ours
 	isOurs := func(e *node) bool {
 		if e == nil {
 			return false
 		}
-		if n := e.sub["AppName"]; n != nil && strings.EqualFold(n.str, appName) {
+		strContainsCI := func(s, sub string) bool {
+			return strings.Contains(strings.ToLower(s), strings.ToLower(sub))
+		}
+		if n := e.sub["AppName"]; n != nil && strContainsCI(n.str, "deckanator") {
 			return true
 		}
-		if n := e.sub["Exe"]; n != nil {
-			exe := strings.Trim(n.str, "\"")
-			if strings.Contains(exe, "deckanator") || strings.Contains(exe, "Deckanator") ||
-				(exe == "/usr/bin/flatpak" && func() bool {
-					lo := e.sub["LaunchOptions"]
-					return lo != nil && strings.Contains(lo.str, flatpakAppID)
-				}()) {
+		for _, field := range []string{"Exe", "StartDir", "ShortcutPath"} {
+			if n := e.sub[field]; n != nil {
+				v := strings.Trim(n.str, "\"")
+				if strContainsCI(v, "deckanator") {
+					return true
+				}
+			}
+		}
+		if n := e.sub["Exe"]; n != nil && strings.Trim(n.str, "\"") == "/usr/bin/flatpak" {
+			if lo := e.sub["LaunchOptions"]; lo != nil && strings.Contains(lo.str, flatpakAppID) {
 				return true
 			}
 		}
