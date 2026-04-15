@@ -193,7 +193,7 @@ func findSteamUser(steamDir string) string {
 	return best
 }
 
-func buildShortcut(appID uint32, name, exe, startDir, iconPath string) *node {
+func buildShortcut(appID uint32, name, exe, startDir, iconPath, launchOptions string) *node {
 	n := newMap()
 	n.set("appid", newInt(int32(appID)))
 	n.set("AppName", newStr(name))
@@ -201,7 +201,7 @@ func buildShortcut(appID uint32, name, exe, startDir, iconPath string) *node {
 	n.set("StartDir", newStr(startDir))
 	n.set("icon", newStr(iconPath))
 	n.set("ShortcutPath", newStr(""))
-	n.set("LaunchOptions", newStr(""))
+	n.set("LaunchOptions", newStr(launchOptions))
 	n.set("IsHidden", newInt(0))
 	n.set("AllowDesktopConfig", newInt(1))
 	n.set("AllowOverlay", newInt(1))
@@ -215,7 +215,7 @@ func buildShortcut(appID uint32, name, exe, startDir, iconPath string) *node {
 	return n
 }
 
-func addToShortcuts(steamDir, userID, exeField, startDir, iconPath string, appID uint32) error {
+func addToShortcuts(steamDir, userID, exeField, launchOptions, startDir, iconPath string, appID uint32) error {
 	scDir := filepath.Join(steamDir, "userdata", userID, "config")
 	scPath := filepath.Join(scDir, "shortcuts.vdf")
 
@@ -253,7 +253,11 @@ func addToShortcuts(steamDir, userID, exeField, startDir, iconPath string, appID
 		key = strconv.Itoa(maxIdx + 1)
 	}
 
-	shortcuts.set(key, buildShortcut(appID, appName, exeField, startDir, iconPath))
+	// stop Steam before modifying shortcuts.vdf - otherwise Steam overwrites our changes on exit
+	exec.Command("pkill", "-x", "steam").Run()
+	exec.Command("pkill", "-x", "Steam").Run()
+
+	shortcuts.set(key, buildShortcut(appID, appName, exeField, startDir, iconPath, launchOptions))
 
 	// sort keys numerically for clean output
 	sort.Slice(shortcuts.order, func(i, j int) bool {
@@ -480,12 +484,17 @@ func main() {
 	binPath  := filepath.Join(home, installDir, exeName)
 	iconPath := filepath.Join(home, installDir, "icon.png")
 
-	// exe field for Steam shortcuts
-	exeField := "\"" + binPath + "\""
+	// exe and launch options for Steam shortcut
+	var exeField, launchOptions string
 	if *useFlatpak {
-		exeField = "flatpak run " + flatpakAppID
+		exeField = "/usr/bin/flatpak"
+		launchOptions = "run " + flatpakAppID
+	} else {
+		exeField = "\"" + binPath + "\""
+		launchOptions = ""
 	}
-	appID := computeAppID(exeField, appName)
+	// appID must be stable across install methods - always derive from flatpak ID
+	appID := computeAppID("/usr/bin/flatpak", appName)
 
 	steamDir := findSteamDir(home)
 	userID := ""
@@ -595,7 +604,7 @@ func main() {
 	fmt.Printf("    user: %s\n", userID)
 
 	step(5, "Adding to Steam shortcuts...")
-	if err := addToShortcuts(steamDir, userID, exeField, filepath.Dir(binPath), iconPath, appID); err != nil {
+	if err := addToShortcuts(steamDir, userID, exeField, launchOptions, filepath.Dir(binPath), iconPath, appID); err != nil {
 		fmt.Fprintf(os.Stderr, "    warning: could not update shortcuts.vdf: %v\n", err)
 	} else {
 		fmt.Println("    done")
