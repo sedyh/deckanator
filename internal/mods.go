@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -12,12 +13,19 @@ import (
 )
 
 type ModResult struct {
-	ProjectID   string `json:"project_id"`
-	Slug        string `json:"slug"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	IconURL     string `json:"icon_url"`
-	Downloads   int    `json:"downloads"`
+	ProjectID   string   `json:"project_id"`
+	Slug        string   `json:"slug"`
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	IconURL     string   `json:"icon_url"`
+	Downloads   int      `json:"downloads"`
+	ProjectType string   `json:"project_type"`
+	Categories  []string `json:"categories"`
+}
+
+type SearchResponse struct {
+	Hits      []ModResult `json:"hits"`
+	TotalHits int         `json:"total_hits"`
 }
 
 type ModVersion struct {
@@ -34,10 +42,11 @@ type ModVersion struct {
 }
 
 type InstalledMod struct {
-	ProjectID string `json:"project_id"`
-	Filename  string `json:"filename"`
-	Title     string `json:"title"`
-	VersionID string `json:"version_id"`
+	ProjectID   string `json:"project_id"`
+	Filename    string `json:"filename"`
+	Title       string `json:"title"`
+	VersionID   string `json:"version_id"`
+	ProjectType string `json:"project_type,omitempty"`
 }
 
 func modsDir(profileID string) string {
@@ -48,39 +57,75 @@ func metaPath(profileID, projectID string) string {
 	return filepath.Join(modsDir(profileID), projectID+".modmeta")
 }
 
-func SearchMods(query, mcVersion, loader string) ([]ModResult, error) {
-	facets := fmt.Sprintf(`[["project_type:mod"],["categories:%s"],["versions:%s"]]`, loader, mcVersion)
-	params := url.Values{}
-	params.Set("query", query)
-	params.Set("facets", facets)
-	params.Set("limit", "20")
+func SearchMods(query, mcVersion, loader, sortBy string, offset int, showMods, showDatapacks bool) (SearchResponse, error) {
+	var facetGroups []string
 
-	resp, err := http.Get("https://api.modrinth.com/v2/search?" + params.Encode())
+	if showMods || showDatapacks {
+		var typeItems []string
+		if showMods {
+			typeItems = append(typeItems, `"project_type:mod"`)
+		}
+		if showDatapacks {
+			typeItems = append(typeItems, `"project_type:datapack"`)
+		}
+		facetGroups = append(facetGroups, "["+strings.Join(typeItems, ",")+"]")
+	}
+
+	if mcVersion != "" {
+		facetGroups = append(facetGroups, fmt.Sprintf(`["versions:%s"]`, mcVersion))
+	}
+
+	if showMods && !showDatapacks && loader != "" {
+		facetGroups = append(facetGroups, fmt.Sprintf(`["categories:%s"]`, loader))
+	}
+
+	if sortBy == "" {
+		if query != "" {
+			sortBy = "relevance"
+		} else {
+			sortBy = "downloads"
+		}
+	}
+
+	params := url.Values{}
+	if query != "" {
+		params.Set("query", query)
+	}
+	if len(facetGroups) > 0 {
+		params.Set("facets", "["+strings.Join(facetGroups, ",")+"]")
+	}
+	params.Set("limit", "20")
+	params.Set("offset", fmt.Sprintf("%d", offset))
+	params.Set("index", sortBy)
+
+	reqURL := "https://api.modrinth.com/v2/search?" + params.Encode()
+	log.Printf("[mods] SearchMods url: %s", reqURL)
+
+	resp, err := http.Get(reqURL)
 	if err != nil {
-		return nil, err
+		log.Printf("[mods] SearchMods http error: %v", err)
+		return SearchResponse{}, err
 	}
 	defer resp.Body.Close()
 
-	var result struct {
-		Hits []ModResult `json:"hits"`
+	var raw struct {
+		Hits      []ModResult `json:"hits"`
+		TotalHits int         `json:"total_hits"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, err
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		log.Printf("[mods] SearchMods decode error: %v", err)
+		return SearchResponse{}, err
 	}
-	return result.Hits, nil
+	log.Printf("[mods] SearchMods hits=%d total=%d", len(raw.Hits), raw.TotalHits)
+	return SearchResponse{Hits: raw.Hits, TotalHits: raw.TotalHits}, nil
 }
 
-func GetModVersions(projectID, mcVersion, loader string) ([]ModVersion, error) {
-	params := url.Values{}
-	params.Set("game_versions", fmt.Sprintf(`["%s"]`, mcVersion))
-	params.Set("loaders", fmt.Sprintf(`["%s"]`, loader))
-
+func fetchVersions(projectID string, params url.Values) ([]ModVersion, error) {
 	resp, err := http.Get(fmt.Sprintf("https://api.modrinth.com/v2/project/%s/version?%s", projectID, params.Encode()))
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-
 	var versions []ModVersion
 	if err := json.NewDecoder(resp.Body).Decode(&versions); err != nil {
 		return nil, err
@@ -88,8 +133,48 @@ func GetModVersions(projectID, mcVersion, loader string) ([]ModVersion, error) {
 	return versions, nil
 }
 
-func InstallMod(profileID, projectID, title, versionID, downloadURL, filename string) error {
-	dir := modsDir(profileID)
+func GetModVersions(projectID, mcVersion, projectType, loader string) ([]ModVersion, error) {
+	actualLoader := loader
+	if projectType == "datapack" {
+		actualLoader = "datapack"
+	}
+
+	params := url.Values{}
+	if mcVersion != "" {
+		params.Set("game_versions", fmt.Sprintf(`["%s"]`, mcVersion))
+	}
+	if actualLoader != "" {
+		params.Set("loaders", fmt.Sprintf(`["%s"]`, actualLoader))
+	}
+
+	versions, err := fetchVersions(projectID, params)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(versions) == 0 && mcVersion != "" {
+		fallback := url.Values{}
+		if actualLoader != "" {
+			fallback.Set("loaders", fmt.Sprintf(`["%s"]`, actualLoader))
+		}
+		versions, err = fetchVersions(projectID, fallback)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return versions, nil
+}
+
+func installDir(profileID, projectType, filename string) string {
+	if projectType == "datapack" && strings.HasSuffix(strings.ToLower(filename), ".zip") {
+		return filepath.Join(GameDir(), "profiles", profileID, "datapacks")
+	}
+	return modsDir(profileID)
+}
+
+func InstallMod(profileID, projectID, title, projectType, versionID, downloadURL, filename string) error {
+	dir := installDir(profileID, projectType, filename)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
@@ -117,10 +202,11 @@ func InstallMod(profileID, projectID, title, versionID, downloadURL, filename st
 	}
 
 	meta := InstalledMod{
-		ProjectID: projectID,
-		Filename:  filename,
-		Title:     title,
-		VersionID: versionID,
+		ProjectID:   projectID,
+		Filename:    filename,
+		Title:       title,
+		VersionID:   versionID,
+		ProjectType: projectType,
 	}
 	data, _ := json.Marshal(meta)
 	return os.WriteFile(metaPath(profileID, projectID), data, 0644)
@@ -133,7 +219,8 @@ func DeleteMod(profileID, projectID string) error {
 	}
 	for _, m := range mods {
 		if m.ProjectID == projectID {
-			os.Remove(filepath.Join(modsDir(profileID), m.Filename))
+			dir := installDir(profileID, m.ProjectType, m.Filename)
+			os.Remove(filepath.Join(dir, m.Filename))
 			break
 		}
 	}
@@ -149,7 +236,7 @@ func ListMods(profileID string) ([]InstalledMod, error) {
 	if err != nil {
 		return nil, err
 	}
-	var mods []InstalledMod
+	mods := make([]InstalledMod, 0)
 	for _, e := range entries {
 		if !e.IsDir() && strings.HasSuffix(e.Name(), ".modmeta") {
 			data, err := os.ReadFile(filepath.Join(dir, e.Name()))

@@ -20,6 +20,10 @@
     triggerEl?.querySelector('.trigger')?.focus()
   }
 
+  export function openMenu() {
+    if (!disabled) openDropdown()
+  }
+
   function checkPosition() {
     if (!triggerEl) return
     const rect = triggerEl.getBoundingClientRect()
@@ -115,6 +119,7 @@
     {disabled}
     on:click={toggle}
     on:keydown={handleKeydown}
+    on:focus
   >
     <span class="val">{label || '—'}</span>
     <span class="arrow" class:flip={open}>

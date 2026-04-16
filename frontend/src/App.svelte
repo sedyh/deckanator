@@ -340,11 +340,15 @@
   }
 
   function handleGlobalKey(e) {
+    if (modsOpen) return
     if (document.querySelector('.wrap.open')) return
 
-    if (e.key === 'm' && profile && !modsOpen && carouselMode !== 'edit') {
-      modsOpen = true
-      return
+    if (e.code === 'KeyM') {
+      console.log('[app] m pressed profile:', profile?.id, 'modsOpen:', modsOpen, 'carouselMode:', carouselMode)
+      if (profile && !modsOpen && carouselMode !== 'edit') {
+        modsOpen = true
+        return
+      }
     }
 
     if (carouselMode === 'edit') return
@@ -377,7 +381,7 @@
           const item = focusableItems.find(i => i.idx === lastFocus.idx)
             ?? focusableItems[focusableItems.length - 1]
           if (item) { panelIdx = item.idx; item.focus() }
-        } else if (lastFocus.mode === 'action') {
+        } else if (lastFocus.mode === 'action' && profiles.length > 0) {
           carouselRef?.enterAction()
         } else {
           if (focusableItems.length > 0) { panelIdx = focusableItems[0].idx; focusableItems[0].focus() }
@@ -396,8 +400,10 @@
         const item = focusableItems.find(i => i.idx === lastFocus.idx)
           ?? focusableItems[focusableItems.length - 1]
         if (item) { panelIdx = item.idx; item.focus() }
-      } else {
+      } else if (profiles.length > 0) {
         carouselRef?.enterAction()
+      } else {
+        if (focusableItems.length > 0) { panelIdx = focusableItems[0].idx; focusableItems[0].focus() }
       }
       return
     }
@@ -413,7 +419,16 @@
 
 <div class="app">
   {#if modsOpen && profile}
-    <ModsScreen {profile} onClose={() => { modsOpen = false }} />
+    <ModsScreen {profile} onClose={() => {
+      modsOpen = false
+      tick().then(() => {
+        if (lastFocus.mode === 'action') {
+          carouselRef?.enterAction()
+        } else {
+          carouselRef?.focusCarousel()
+        }
+      })
+    }} />
   {/if}
   <div class="content">
     <section class="carousel-section">
