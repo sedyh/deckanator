@@ -59,3 +59,9 @@ export const IconFolder = `<svg xmlns="http://www.w3.org/2000/svg" width="24" he
 export const IconPlay = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>`
 
 export const IconPause = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="3" width="4" height="18" rx="1"/><rect x="15" y="3" width="4" height="18" rx="1"/></svg>`
+
+export const IconPuzzle = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M19.496 10.002l.001 -2.007a1.5 1.5 0 0 0 -1.5 -1.495h-1.5v-.5a2 2 0 1 0 -4 0v.5h-1.5a1.5 1.5 0 0 0 -1.5 1.5v1.5h-.5a2 2 0 1 0 0 4h.5v1.5a1.5 1.5 0 0 0 1.5 1.5h1.5v.5a2 2 0 1 0 4 0v-.5h1.5a1.5 1.5 0 0 0 1.5 -1.5v-2.003a2 2 0 1 0 0 -3.995z"/></svg>`
+
+export const IconSearch = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>`
+
+export const IconArrowLeft = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>`

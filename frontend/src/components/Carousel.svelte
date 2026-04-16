@@ -14,7 +14,7 @@
   const dispatch = createEventDispatcher()
 
   export let mode = 'nav'
-  let actionIdx = 0   // 0=files, 1=rename, 2=delete
+  export let actionIdx = 0  // 0=files, 1=rename, 2=delete
 
   let carouselEl
 
@@ -25,11 +25,11 @@
     if (selectedIndex < profiles.length - 1) { selectedIndex++; mode = keepAction ? 'action' : 'nav' }
   }
   export function focusCarousel() { carouselEl?.focus() }
-  export function enterAction(idx = 2) {
+  export function enterAction(idx = -1) {
     if (!profile) return
     carouselEl?.focus()
     mode = 'action'
-    actionIdx = idx
+    if (idx >= 0) actionIdx = idx
   }
   let editValue = ''
   let editNick  = ''
@@ -59,14 +59,18 @@
     mode = 'edit'
   }
 
-  function commitEdit() {
+  function commitEdit(returnToAction = true) {
     if (profile) {
       const name = editValue.trim() || profile.name
       const nick = editNick.trim() || 'Player'
       dispatch('save', { ...profile, name, playerName: nick })
     }
-    mode = 'action'
-    actionIdx = 1
+    if (returnToAction) {
+      mode = 'action'
+      actionIdx = 1
+    } else {
+      mode = 'nav'
+    }
     carouselEl?.focus()
   }
 
@@ -201,7 +205,7 @@
                   placeholder="Name"
                   maxlength="15"
                   bind:value={editValue}
-                    on:blur={(e) => { if (!(e.currentTarget?.closest('.card-label')?.contains(/** @type {Node} */ (e.relatedTarget)))) commitEdit() }}
+                    on:blur={(e) => { if (mode === 'edit' && !(e.currentTarget?.closest('.card-label')?.contains(/** @type {Node} */ (e.relatedTarget)))) commitEdit(false) }}
                     on:keydown={(e) => {
                       if (e.key === 'Enter')     { e.stopPropagation(); commitEdit() }
                       if (e.key === 'Escape')    { e.stopPropagation(); cancelEdit() }
@@ -218,7 +222,7 @@
                   placeholder="Username"
                   maxlength="16"
                   bind:value={editNick}
-                  on:blur={(e) => { if (!(e.currentTarget?.closest('.card-label')?.contains(/** @type {Node} */ (e.relatedTarget)))) commitEdit() }}
+                  on:blur={(e) => { if (mode === 'edit' && !(e.currentTarget?.closest('.card-label')?.contains(/** @type {Node} */ (e.relatedTarget)))) commitEdit(false) }}
                   on:keydown={(e) => {
                     if (e.key === 'Enter')   { e.stopPropagation(); commitEdit() }
                     if (e.key === 'Escape')  { e.stopPropagation(); cancelEdit() }
@@ -288,29 +292,17 @@
                   <span>Delete</span>
                 </button>
               {:else}
-                <button
-                  class="action-btn"
-                  tabindex="-1"
-                  on:click|stopPropagation={() => OpenProfileDir(item.id)}
-                >
+                <button class="action-btn" tabindex="-1" on:click|stopPropagation={() => OpenProfileDir(item.id)}>
                   <span class="btn-icon">{@html IconFolder}</span>
                   <span>Files</span>
                 </button>
                 <div class="btn-sep"></div>
-                <button
-                  class="action-btn"
-                  tabindex="-1"
-                  on:click|stopPropagation={startEdit}
-                >
+                <button class="action-btn" tabindex="-1" on:click|stopPropagation={startEdit}>
                   <span class="btn-icon">{@html IconSettings}</span>
                   <span>Rename</span>
                 </button>
                 <div class="btn-sep"></div>
-                <button
-                  class="action-btn danger"
-                  tabindex="-1"
-                  on:click|stopPropagation={deleteProfile}
-                >
+                <button class="action-btn danger" tabindex="-1" on:click|stopPropagation={deleteProfile}>
                   <span class="btn-icon">{@html IconTrash}</span>
                   <span>Delete</span>
                 </button>

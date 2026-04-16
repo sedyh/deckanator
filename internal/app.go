@@ -91,6 +91,26 @@ func (a *App) OpenProfileDir(profileID string) error {
 	return cmd.Start()
 }
 
+func (a *App) SearchMods(query, mcVersion, loader string) ([]ModResult, error) {
+	return SearchMods(query, mcVersion, loader)
+}
+
+func (a *App) GetModVersions(projectID, mcVersion, loader string) ([]ModVersion, error) {
+	return GetModVersions(projectID, mcVersion, loader)
+}
+
+func (a *App) InstallMod(profileID, projectID, title, versionID, downloadURL, filename string) error {
+	return InstallMod(profileID, projectID, title, versionID, downloadURL, filename)
+}
+
+func (a *App) DeleteMod(profileID, projectID string) error {
+	return DeleteMod(profileID, projectID)
+}
+
+func (a *App) ListMods(profileID string) ([]InstalledMod, error) {
+	return ListMods(profileID)
+}
+
 func (a *App) Launch(profileID string) error {
 	profiles, err := LoadProfiles()
 	if err != nil {

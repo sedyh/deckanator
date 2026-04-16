@@ -10,7 +10,8 @@
   import Carousel       from './components/Carousel.svelte'
   import VersionSelector from './components/VersionSelector.svelte'
   import ActionButton   from './components/ActionButton.svelte'
-  import { GlyphA, GlyphB, GlyphDPadH, GlyphDPadV, IconPlus } from './lib/icons.js'
+  import ModsScreen     from './components/ModsScreen.svelte'
+  import { GlyphA, GlyphB, GlyphY, GlyphDPadH, GlyphDPadV, IconPlus } from './lib/icons.js'
 
   let profiles        = []
   let icons           = []
@@ -22,9 +23,12 @@
   let versionSelRef
   let actionBtnRef
 
-  let panelIdx     = -1  // -1 = carousel, 0=new-profile, 1=mc, 2=fabric, 3=java, 4=run
-  let lastFocus    = { mode: 'none', idx: -1 }  // { mode: 'action'|'panel'|'none', idx }
-  let suppressBlur = false
+  let panelIdx          = -1  // -1 = carousel, 0=new-profile, 1=mc, 2=fabric, 3=java, 4=run
+  let lastFocus         = { mode: 'none', idx: -1 }  // { mode: 'action'|'panel'|'none', idx }
+  let suppressBlur      = false
+  let carouselActionIdx = 0
+
+  let modsOpen = false
 
   const loader = 'fabric'
   let mcVersions          = []
@@ -100,6 +104,11 @@
         if (pressed && !btnPressed[idx]) fireKey(key)
         btnPressed[idx] = pressed
       }
+
+      // Y button (index 3) → open Mods
+      const yPressed = gp.buttons[3]?.pressed ?? false
+      if (yPressed && !btnPressed['y']) { if (profile && !modsOpen) modsOpen = true }
+      btnPressed['y'] = yPressed
 
       const lx = gp.axes[0] ?? 0
       const ly = gp.axes[1] ?? 0
@@ -254,6 +263,7 @@
     profiles      = [...profiles, p]
     selectedIndex = profiles.length - 1
     installedMap  = { ...installedMap, [p.id]: false }
+    carouselMode  = 'nav'
   }
 
   async function handleDelete(e) {
@@ -281,12 +291,9 @@
 
   $: focusableItems = buildFocusableItems(locked, loader)
 
-  let _prevCarouselMode = carouselMode
-  $: {
-    if (carouselMode === 'action') lastFocus = { mode: 'action', idx: -1 }
-    else if (_prevCarouselMode === 'action') lastFocus = { mode: 'none', idx: -1 }
-    _prevCarouselMode = carouselMode
-  }
+  $: inActionMode = carouselMode === 'action'
+
+  $: if (inActionMode) lastFocus = { mode: 'action', idx: carouselActionIdx }
 
   $: if (focusableItems && panelIdx >= 0) {
     const item = focusableItems.find(i => i.idx === panelIdx)
@@ -335,11 +342,16 @@
   function handleGlobalKey(e) {
     if (document.querySelector('.wrap.open')) return
 
+    if (e.key === 'm' && profile && !modsOpen && carouselMode !== 'edit') {
+      modsOpen = true
+      return
+    }
+
     if (carouselMode === 'edit') return
 
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault()
-      const keepAction = lastFocus.mode === 'action' || carouselMode === 'action'
+      const keepAction = lastFocus.mode === 'action' || inActionMode
       if (e.key === 'ArrowLeft') carouselRef?.navigateLeft(keepAction)
       else carouselRef?.navigateRight(keepAction)
       if (!keepAction && lastFocus.mode === 'panel') {
@@ -356,14 +368,19 @@
       return
     }
 
-    if (carouselMode === 'action') return
+    if (inActionMode) return
 
     if (e.key === 'ArrowDown') {
       e.preventDefault()
       if (panelIdx === -1) {
-        if (focusableItems.length > 0) {
-          panelIdx = focusableItems[0].idx
-          focusableItems[0].focus()
+        if (lastFocus.mode === 'panel') {
+          const item = focusableItems.find(i => i.idx === lastFocus.idx)
+            ?? focusableItems[focusableItems.length - 1]
+          if (item) { panelIdx = item.idx; item.focus() }
+        } else if (lastFocus.mode === 'action') {
+          carouselRef?.enterAction()
+        } else {
+          if (focusableItems.length > 0) { panelIdx = focusableItems[0].idx; focusableItems[0].focus() }
         }
       } else {
         navigatePanelBy(1)
@@ -373,8 +390,15 @@
 
     if (e.key === 'ArrowUp') {
       e.preventDefault()
-      if (panelIdx >= 0) navigatePanelBy(-1)
-      else carouselRef?.enterAction(1)
+      if (panelIdx >= 0) {
+        navigatePanelBy(-1)
+      } else if (lastFocus.mode === 'panel') {
+        const item = focusableItems.find(i => i.idx === lastFocus.idx)
+          ?? focusableItems[focusableItems.length - 1]
+        if (item) { panelIdx = item.idx; item.focus() }
+      } else {
+        carouselRef?.enterAction()
+      }
       return
     }
 
@@ -388,15 +412,20 @@
 <svelte:window on:keydown={handleGlobalKey} />
 
 <div class="app">
+  {#if modsOpen && profile}
+    <ModsScreen {profile} onClose={() => { modsOpen = false }} />
+  {/if}
   <div class="content">
     <section class="carousel-section">
       <Carousel
         bind:this={carouselRef}
         bind:mode={carouselMode}
+        bind:actionIdx={carouselActionIdx}
         {profiles}
         {icons}
         bind:selectedIndex
         checking={checkingInstall}
+        on:mods={() => { if (profile) modsOpen = true }}
         {installPct}
         installProfileId={activeInstallId}
         {installedMap}
@@ -408,13 +437,17 @@
     </section>
 
     <div class="panel-row">
-      <section class="panel">
+      <section class="panel" on:focusout={(e) => {
+        if (!suppressBlur && panelIdx >= 0 && !e.currentTarget.contains(/** @type {Node} */ (e.relatedTarget))) {
+          lastFocus = { mode: 'panel', idx: panelIdx }
+          panelIdx = -1
+        }
+      }}>
         <button
           bind:this={newProfileBtnEl}
           class="new-profile-btn"
           class:panel-focused={panelIdx === 0}
           on:click={handleCreate}
-          on:blur={() => { if (!suppressBlur && panelIdx === 0) { lastFocus = { mode: 'panel', idx: 0 }; panelIdx = -1 } }}
           tabindex="-1"
         >
           <span class="new-profile-icon">{@html IconPlus}</span>
@@ -467,6 +500,12 @@
       </span>
     </div>
     <div class="hints-right">
+      {#if profile && !modsOpen}
+        <span class="hint">
+          <span class="glyph">{@html GlyphY}</span>
+          <span>Mods</span>
+        </span>
+      {/if}
       <span class="hint">
         <span class="glyph">{@html GlyphA}</span>
         <span>Select</span>
@@ -481,6 +520,7 @@
 
 <style>
   .app {
+    position: relative;
     width: 100vw;
     height: 100vh;
     display: flex;
