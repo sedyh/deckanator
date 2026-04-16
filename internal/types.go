@@ -7,6 +7,7 @@ type Profile struct {
 	Loader              string `json:"loader"`
 	MCVersion           string `json:"mcVersion"`
 	FabricLoaderVersion string `json:"fabricLoaderVersion,omitempty"`
+	PlayerName          string `json:"playerName,omitempty"`
 }
 
 type ProfileStore struct {

@@ -63,7 +63,10 @@ func Launch(p Profile) error {
 	allLibs = append(allLibs, filterLibraries(extraLibs)...)
 	classpath := buildClasspath(allLibs, libDir, filepath.Join(dir, "versions", mcVersion, mcVersion+".jar"))
 
-	playerName := "Player"
+	playerName := p.PlayerName
+	if playerName == "" {
+		playerName = "Player"
+	}
 	playerUUID := "00000000-0000-0000-0000-000000000000"
 	accessToken := "0"
 

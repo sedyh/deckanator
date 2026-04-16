@@ -32,6 +32,9 @@
     actionIdx = idx
   }
   let editValue = ''
+  let editNick  = ''
+  let editField = 'name'  // 'name' | 'nick'
+  let nameInputEl, nickInputEl
 
   const iconMap = {}
   $: icons.forEach(ic => { iconMap[ic.id] = ic })
@@ -51,11 +54,17 @@
   function startEdit() {
     if (!profile) return
     editValue = profile.name
+    editNick  = profile.playerName || 'Player'
+    editField = 'name'
     mode = 'edit'
   }
 
   function commitEdit() {
-    if (profile && editValue.trim()) dispatch('save', { ...profile, name: editValue.trim() })
+    if (profile) {
+      const name = editValue.trim() || profile.name
+      const nick = editNick.trim() || 'Player'
+      dispatch('save', { ...profile, name, playerName: nick })
+    }
     mode = 'action'
     actionIdx = 1
     carouselEl?.focus()
@@ -66,6 +75,14 @@
     actionIdx = 1
     carouselEl?.focus()
   }
+
+  function switchEditField(to) {
+    editField = to
+    if (to === 'name') nameInputEl?.focus()
+    else               nickInputEl?.focus()
+  }
+
+  $: if (mode === 'edit' && nameInputEl) nameInputEl.focus()
 
   function deleteProfile() {
     if (profile) dispatch('delete', profile.id)
@@ -176,21 +193,49 @@
         >
           <div class="card-label">
             {#if mode === 'edit' && isActive}
-              <!-- svelte-ignore a11y-autofocus -->
-              <input
-                class="name-input"
-                autofocus
-                maxlength="15"
-                bind:value={editValue}
-                on:blur={commitEdit}
-                on:keydown={(e) => {
-                  if (e.key === 'Enter')  { e.stopPropagation(); commitEdit() }
-                  if (e.key === 'Escape') { e.stopPropagation(); cancelEdit() }
-                }}
-              />
+              <div class="label-row">
+                <input
+                  bind:this={nameInputEl}
+                  class="name-input"
+                  class:input-active={editField === 'name'}
+                  placeholder="Name"
+                  maxlength="15"
+                  bind:value={editValue}
+                    on:blur={(e) => { if (!(e.currentTarget?.closest('.card-label')?.contains(/** @type {Node} */ (e.relatedTarget)))) commitEdit() }}
+                    on:keydown={(e) => {
+                      if (e.key === 'Enter')     { e.stopPropagation(); commitEdit() }
+                      if (e.key === 'Escape')    { e.stopPropagation(); cancelEdit() }
+                      if (e.key === 'ArrowDown') { e.stopPropagation(); switchEditField('nick') }
+                    }}
+                  on:focus={() => editField = 'name'}
+                />
+              </div>
+              <div class="label-row">
+                <input
+                  bind:this={nickInputEl}
+                  class="name-input name-input-nick"
+                  class:input-active={editField === 'nick'}
+                  placeholder="Username"
+                  maxlength="16"
+                  bind:value={editNick}
+                  on:blur={(e) => { if (!(e.currentTarget?.closest('.card-label')?.contains(/** @type {Node} */ (e.relatedTarget)))) commitEdit() }}
+                  on:keydown={(e) => {
+                    if (e.key === 'Enter')   { e.stopPropagation(); commitEdit() }
+                    if (e.key === 'Escape')  { e.stopPropagation(); cancelEdit() }
+                    if (e.key === 'ArrowUp') { e.stopPropagation(); switchEditField('name') }
+                  }}
+                  on:focus={() => editField = 'nick'}
+                />
+                <span class="label-id">#{item.id}</span>
+              </div>
             {:else}
-              <span class="label-name">{item.name.slice(0, 15)}</span>
-              <span class="label-id">#{item.id}</span>
+              <div class="label-row">
+                <span class="label-name">{item.name.slice(0, 15)}</span>
+              </div>
+              <div class="label-row">
+                <span class="label-nick">{(item.playerName || 'Player').slice(0, 16)}</span>
+                <span class="label-id">#{item.id}</span>
+              </div>
             {/if}
           </div>
 
@@ -327,22 +372,35 @@
   .card-wrap.adjacent { cursor: pointer; }
 
   .card-label {
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: var(--text);
-    height: 1.11rem;
-    white-space: nowrap;
     width: 13.33rem;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .label-row {
+    display: flex;
+    align-items: baseline;
     justify-content: space-between;
     gap: 0.5rem;
+    white-space: nowrap;
   }
 
   .label-name {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text);
     overflow: hidden;
     text-overflow: ellipsis;
-    flex-shrink: 0;
+  }
+
+  .label-nick {
+    font-size: 0.67rem;
+    font-weight: 400;
+    color: var(--accent);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
   }
 
   .label-id {
@@ -360,10 +418,22 @@
     color: var(--text);
     border: none;
     outline: none;
-    border-bottom: 2px solid var(--accent);
-    width: 100%;
-    padding: 0 0 0.11rem;
+    border-bottom: 2px solid rgba(255,255,255,0.15);
+    flex: 1;
+    min-width: 0;
+    padding: 0 0 0.1rem;
     caret-color: var(--accent);
+    opacity: 0.45;
+  }
+
+  .name-input.input-active {
+    border-bottom-color: var(--accent);
+    opacity: 1;
+  }
+
+  .name-input-nick {
+    font-size: 0.67rem;
+    font-weight: 400;
   }
 
   .card {
