@@ -23,9 +23,11 @@ modules:
       - -Ddemos=false
       - -Ddoc=false
     sources:
-      - type: git
-        url: https://gitlab.gnome.org/GNOME/libmanette.git
-        tag: '0.2.13'
+      - type: archive
+        url: https://github.com/GNOME/libmanette/archive/refs/tags/0.2.13.tar.gz
+        sha256: a297eedaf95526de8313f87cf4fbea02cbe1f5cf4b7b30ffa64db63e59b302e9
+        mirror-urls:
+          - https://gitlab.gnome.org/GNOME/libmanette/-/archive/0.2.13/libmanette-0.2.13.tar.gz
       - type: patch
         path: patches/libmanette-steamdeck-uaf.patch
         use-git: true
