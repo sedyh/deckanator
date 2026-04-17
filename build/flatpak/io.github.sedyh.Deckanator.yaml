@@ -39,6 +39,9 @@ modules:
           - grep -q "if (!MANETTE_IS_BACKEND" src/manette-backend.c
           - grep -q "g_object_ref (self)" src/manette-hid-backend.c
           - grep -q "g_object_ref (self)" src/manette-evdev-backend.c
+          - grep -q "g_signal_connect_object" src/manette-hid-backend.c
+          - grep -q "g_clear_object (&self->driver)" src/manette-hid-backend.c
+          - grep -q "g_signal_handlers_disconnect_by_data" src/manette-hid-backend.c
     cleanup:
       - /include
       - /lib/pkgconfig
