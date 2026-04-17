@@ -31,6 +31,30 @@
     mode = 'action'
     if (idx >= 0) actionIdx = idx
   }
+  export function getMode() { return mode }
+  export function actionUp() {
+    if (mode !== 'action') return false
+    actionIdx = Math.max(0, actionIdx - 1)
+    return true
+  }
+  export function actionDown() {
+    if (mode !== 'action') return false
+    if (actionIdx < 2) { actionIdx++; return true }
+    mode = 'nav'
+    dispatch('enterPanel')
+    return true
+  }
+  export function actionConfirm() {
+    if (mode !== 'action') return false
+    if (actionIdx === 0) profile && OpenProfileDir(profile.id)
+    else if (actionIdx === 1) startEdit()
+    else deleteProfile()
+    return true
+  }
+  export function actionCancel() {
+    if (mode === 'action') { mode = 'nav'; return true }
+    return false
+  }
   let editValue = ''
   let editNick  = ''
   let editField = 'name'  // 'name' | 'nick'
@@ -135,29 +159,11 @@
     window.removeEventListener('mousedown', handleMousedown)
   })
 
-  function handleKeydown(e) {
-    if (e.repeat) return
-    if (mode === 'edit') return  // input handles Enter/Escape with stopPropagation
-
-    if (mode === 'action') {
-      if (e.key === 'ArrowUp')   { e.preventDefault(); e.stopPropagation(); actionIdx = Math.max(0, actionIdx - 1) }
-      if (e.key === 'ArrowDown') {
-        e.preventDefault(); e.stopPropagation()
-        if (actionIdx < 2) { actionIdx++ }
-        else { mode = 'nav'; dispatch('enterPanel') }
-      }
-      if (e.key === 'Enter') {
-        e.preventDefault(); e.stopPropagation()
-        if (actionIdx === 0) profile && OpenProfileDir(profile.id)
-        else if (actionIdx === 1) startEdit()
-        else deleteProfile()
-      }
-      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); mode = 'nav' }
-      return
-    }
-
-    // nav mode: only Enter is handled here; ArrowLeft/Right/Up/Down bubble to App's global handler
-    if (e.key === 'Enter' && profile) { e.preventDefault(); e.stopPropagation(); enterActionMode() }
+  function handleKeydown(_e) {
+    // Navigation and action handling centralized in App.svelte's global
+    // keydown handler so synthetic events from gamepad polling (dispatched
+    // to window) reach the same code path as native events. Edit mode keeps
+    // its own inline input handlers.
   }
 
   $: hints = []

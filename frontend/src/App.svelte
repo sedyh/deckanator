@@ -13,7 +13,7 @@
   import ModsScreen     from './components/ModsScreen.svelte'
   import { GlyphA, GlyphB, GlyphY, GlyphDPadH, GlyphDPadV, IconPlus } from './lib/icons.js'
   import { setupActions } from './lib/actions.js'
-  import { destroy as destroyInput } from './lib/input.js'
+  import { destroy as destroyInput, consumeKey } from './lib/input.js'
 
   let profiles        = []
   let icons           = []
@@ -282,12 +282,11 @@
   }
 
   function handleGlobalKey(e) {
-    if (e.repeat) return
+    if (!consumeKey(e)) return
     if (modsOpen) return
     if (document.querySelector('.wrap.open')) return
 
-    if (e.code === 'KeyM') {
-      console.log('[app] m pressed profile:', profile?.id, 'modsOpen:', modsOpen, 'carouselMode:', carouselMode)
+    if (e.code === 'KeyM' || e.key === 'm' || e.key === 'M' || e.key === 'ь' || e.key === 'Ь') {
       if (profile && !modsOpen && carouselMode !== 'edit') {
         modsOpen = true
         return
@@ -295,6 +294,16 @@
     }
 
     if (carouselMode === 'edit') return
+
+    // Route action-mode navigation through Carousel methods, since synthetic
+    // events dispatched to window don't bubble down to Carousel's element
+    // keydown handler.
+    if (inActionMode) {
+      if (e.key === 'ArrowUp')   { e.preventDefault(); carouselRef?.actionUp(); return }
+      if (e.key === 'ArrowDown') { e.preventDefault(); carouselRef?.actionDown(); return }
+      if (e.key === 'Enter')     { e.preventDefault(); carouselRef?.actionConfirm(); return }
+      if (e.key === 'Escape')    { e.preventDefault(); carouselRef?.actionCancel(); return }
+    }
 
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault()
@@ -315,7 +324,11 @@
       return
     }
 
-    if (inActionMode) return
+    if (e.key === 'Enter' && carouselMode === 'nav' && profile && panelIdx === -1) {
+      e.preventDefault()
+      carouselRef?.enterAction()
+      return
+    }
 
     if (e.key === 'ArrowDown') {
       e.preventDefault()

@@ -1,17 +1,28 @@
 // Godot-like input action system.
 //
-// Passive design to avoid WebKit2GTK instability on Steam Deck:
-//   - Never intercepts or prevents native events (no capture phase, no
-//     stopImmediatePropagation). Native keydowns propagate to handlers as usual.
-//   - Tracks native key state + gamepad state separately and unifies per action.
-//   - Synthetic keydown dispatched to window only for gamepad-exclusive presses,
-//     so Steam Input native events don't duplicate with our polling.
-//   - Handlers that want just_pressed semantics from the keyboard must check
-//     e.repeat themselves.
+// Problems this solves on Steam Deck WebKit2GTK:
+//   1. D-Pad autorepeat after ~1s hold (Steam Input forwards OS autorepeat).
+//   2. Duplicate events when Steam Input native keyboard races with our
+//      gamepad polling.
+//   3. Sticks randomly missing direction changes between polls.
+//   4. Stale keys when a native keyup is lost (app loses focus during nav).
+//
+// Design (no interception to avoid past WebKit2GTK crashes):
+//   - Actions named with multiple triggers (keys, buttons, axes).
+//   - Native events are tracked in bubble phase only; never preventDefault'd.
+//   - Autorepeat is filtered by each keydown handler via consumeKey().
+//   - consumeKey() is a central dedup: rejects a key that's already in flight
+//     until the matching keyup arrives (or a safety timeout elapses).
+//   - Gamepad poll at 16ms with stick hysteresis (enter 0.5, exit 0.3).
+//   - Synthetic keydowns are only dispatched for gamepad-only presses so we
+//     don't double-fire when Steam Input already sent a native event.
 
 const POLL_MS = 16
 const DEFAULT_DEADZONE = 0.5
 const AXIS_RELEASE_DEADZONE = 0.3
+const NATIVE_SAFETY_MS = 1500
+const SYNTHETIC_HOLD_MS = 200
+const STALE_KEY_MS = 500
 
 const actionDefs = new Map()
 const actionState = new Map()
@@ -19,6 +30,9 @@ const listeners = { pressed: new Map(), released: new Map() }
 
 const keyCodesDown = new Set()
 const keyKeysDown = new Set()
+const lastKeyActivity = new Map()
+
+const consumed = new Map()
 
 let pollTimer = null
 let started = false
@@ -63,6 +77,28 @@ export function onJustReleased(name, cb) {
     const i = a.indexOf(cb)
     if (i >= 0) a.splice(i, 1)
   }
+}
+
+// Call at the top of every keydown handler. Returns true if the event should
+// be processed; false if it's a duplicate (autorepeat, Steam Input echo,
+// native+gamepad race). State is cleared on native keyup, synthetic timeout,
+// or a safety timeout so things never get permanently stuck.
+export function consumeKey(e) {
+  if (e.repeat) return false
+  const key = e.key
+  if (!key) return true
+  if (consumed.has(key)) return false
+
+  const ttl = e.isTrusted ? NATIVE_SAFETY_MS : SYNTHETIC_HOLD_MS
+  const timer = setTimeout(() => consumed.delete(key), ttl)
+  consumed.set(key, timer)
+  return true
+}
+
+function releaseConsumed(key) {
+  const t = consumed.get(key)
+  if (t) clearTimeout(t)
+  consumed.delete(key)
 }
 
 function evalKeys(def) {
@@ -134,8 +170,27 @@ function dispatchSynthetic(emitKey) {
   }
 }
 
+function pruneStale() {
+  const now = performance.now()
+  for (const code of Array.from(keyCodesDown)) {
+    const t = lastKeyActivity.get('code:' + code)
+    if (t === undefined || now - t > STALE_KEY_MS) {
+      keyCodesDown.delete(code)
+      lastKeyActivity.delete('code:' + code)
+    }
+  }
+  for (const key of Array.from(keyKeysDown)) {
+    const t = lastKeyActivity.get('key:' + key)
+    if (t === undefined || now - t > STALE_KEY_MS) {
+      keyKeysDown.delete(key)
+      lastKeyActivity.delete('key:' + key)
+    }
+  }
+}
+
 function update() {
   try {
+    pruneStale()
     for (const [name, def] of actionDefs) {
       const s = actionState.get(name)
       const keyPressed = evalKeys(def)
@@ -153,13 +208,14 @@ function update() {
 
       if (s.justPressed) {
         fire('pressed', name)
-        // Only synthesize for gamepad-initiated press. Native keydown already
-        // propagated through the browser, so we'd duplicate otherwise.
         if (!keyPressed && gpPressed && def.emitKey) {
           dispatchSynthetic(def.emitKey)
         }
       }
-      if (s.justReleased) fire('released', name)
+      if (s.justReleased) {
+        fire('released', name)
+        if (def.emitKey?.key) releaseConsumed(def.emitKey.key)
+      }
     }
   } catch (err) {
     console.error('[input] update', err)
@@ -186,22 +242,28 @@ function keyMatchesAnyAction(e) {
 
 function onKeyDown(e) {
   if (!e.isTrusted) return
-  if (e.repeat) return
   if (!keyMatchesAnyAction(e)) return
   if (isEditable(e.target)) return
+  const now = performance.now()
+  if (e.code) lastKeyActivity.set('code:' + e.code, now)
+  if (e.key) lastKeyActivity.set('key:' + e.key, now)
+  if (e.repeat) return
   if (e.code) keyCodesDown.add(e.code)
   if (e.key) keyKeysDown.add(e.key)
 }
 
 function onKeyUp(e) {
   if (!e.isTrusted) return
-  if (e.code) keyCodesDown.delete(e.code)
-  if (e.key) keyKeysDown.delete(e.key)
+  if (e.code) { keyCodesDown.delete(e.code); lastKeyActivity.delete('code:' + e.code) }
+  if (e.key) { keyKeysDown.delete(e.key); lastKeyActivity.delete('key:' + e.key); releaseConsumed(e.key) }
 }
 
 function onBlur() {
   keyCodesDown.clear()
   keyKeysDown.clear()
+  lastKeyActivity.clear()
+  for (const [, t] of consumed) clearTimeout(t)
+  consumed.clear()
 }
 
 export function init() {
@@ -220,10 +282,13 @@ export function destroy() {
   window.removeEventListener('keyup', onKeyUp)
   window.removeEventListener('blur', onBlur)
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+  for (const [, t] of consumed) clearTimeout(t)
+  consumed.clear()
   actionDefs.clear()
   actionState.clear()
   listeners.pressed.clear()
   listeners.released.clear()
   keyCodesDown.clear()
   keyKeysDown.clear()
+  lastKeyActivity.clear()
 }

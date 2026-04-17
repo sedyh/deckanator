@@ -5,6 +5,7 @@
   } from '../../wailsjs/go/internal/App.js'
   import SteamSelect from './SteamSelect.svelte'
   import { IconSearch, IconTrash, IconArrowLeft, IconDownload, IconBan } from '../lib/icons.js'
+  import { consumeKey } from '../lib/input.js'
 
   export let profile
   export let onClose = () => {}
@@ -250,7 +251,7 @@
   }
 
   function handleKey(e) {
-    if (e.repeat) return
+    if (!consumeKey(e)) return
     if (document.querySelector('.wrap.open')) return
 
     if (e.key === 'Escape') {
