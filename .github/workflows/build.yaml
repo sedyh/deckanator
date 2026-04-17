@@ -159,7 +159,7 @@ jobs:
 
       - name: Build Flatpak
         run: |
-          flatpak-builder --force-clean --repo=flatpak-repo flatpak-builddir build/flatpak/io.github.sedyh.Deckanator.yml
+          flatpak-builder --force-clean --repo=flatpak-repo flatpak-builddir build/flatpak/io.github.sedyh.Deckanator.yaml
           flatpak build-bundle flatpak-repo deckanator.flatpak io.github.sedyh.Deckanator
 
       - name: Upload artifact
