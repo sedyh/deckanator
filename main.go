@@ -23,7 +23,11 @@ func dumpMaps() {
 	if err != nil {
 		return
 	}
-	out := "/tmp/deckanator-maps.txt"
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		home = "/tmp"
+	}
+	out := filepath.Join(home, "deckanator-maps.txt")
 	if err := os.WriteFile(out, data, 0644); err == nil {
 		fmt.Fprintf(os.Stderr, "maps dumped to %s (%d bytes)\n", out, len(data))
 	}
