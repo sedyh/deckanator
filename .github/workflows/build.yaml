@@ -44,7 +44,7 @@ jobs:
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
 
       - name: Build
-        run: wails build -platform linux/amd64 -tags webkit2_41
+        run: wails build -platform linux/amd64 -tags webkit2_41 -ldflags "-X main.version=${GITHUB_REF_NAME}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -84,7 +84,7 @@ jobs:
         env:
           MACOSX_DEPLOYMENT_TARGET: '10.13'
           CGO_LDFLAGS: '-framework CoreFoundation -framework AppKit -framework UniformTypeIdentifiers'
-        run: wails build -platform darwin/amd64
+        run: wails build -platform darwin/amd64 -ldflags "-X main.version=${GITHUB_REF_NAME}"
 
       - name: Install create-dmg
         run: brew install create-dmg
@@ -138,7 +138,7 @@ jobs:
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
 
       - name: Build
-        run: wails build -platform windows/amd64
+        run: wails build -platform windows/amd64 -ldflags "-X main.version=$env:GITHUB_REF_NAME"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -202,6 +202,10 @@ jobs:
       - name: Build Flatpak
         run: |
           flatpak-builder --force-clean --repo=flatpak-repo flatpak-builddir build/flatpak/io.github.sedyh.Deckanator.yaml
+          echo '=== libmanette files in build dir ==='
+          find flatpak-builddir/files -name 'libmanette*' -printf '%p %s bytes\n' || true
+          echo '=== libmanette symbols in build dir ==='
+          find flatpak-builddir/files -name 'libmanette-*.so*' -not -type l | head -1 | xargs -r -I{} sh -c 'nm -D {} 2>/dev/null | grep manette_backend_emit_event || strings {} | grep -c "MANETTE_IS_BACKEND" || true'
           flatpak build-bundle flatpak-repo deckanator.flatpak io.github.sedyh.Deckanator
 
       - name: Upload artifact
