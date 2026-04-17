@@ -99,6 +99,11 @@ export function consumeKey(e) {
   const key = e.key
   if (!key) return true
 
+  if (pendingRelease.has(key)) {
+    cancelPendingRelease(key)
+    return false
+  }
+
   const now = performance.now()
   const prev = lastAccepted.get(key) ?? 0
   if (now - prev < MIN_ACCEPT_GAP_MS) return false
@@ -350,8 +355,8 @@ function onGamepadDisconnected() {
 export function init() {
   if (started) return
   started = true
-  window.addEventListener('keydown', onKeyDown)
-  window.addEventListener('keyup', onKeyUp)
+  window.addEventListener('keydown', onKeyDown, true)
+  window.addEventListener('keyup', onKeyUp, true)
   window.addEventListener('blur', onBlur)
   window.addEventListener('gamepadconnected', onGamepadConnected)
   window.addEventListener('gamepaddisconnected', onGamepadDisconnected)
@@ -361,8 +366,8 @@ export function init() {
 export function destroy() {
   if (!started) return
   started = false
-  window.removeEventListener('keydown', onKeyDown)
-  window.removeEventListener('keyup', onKeyUp)
+  window.removeEventListener('keydown', onKeyDown, true)
+  window.removeEventListener('keyup', onKeyUp, true)
   window.removeEventListener('blur', onBlur)
   window.removeEventListener('gamepadconnected', onGamepadConnected)
   window.removeEventListener('gamepaddisconnected', onGamepadDisconnected)
