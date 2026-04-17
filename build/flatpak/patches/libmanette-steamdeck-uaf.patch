@@ -1,8 +1,8 @@
 diff --git a/src/manette-backend.c b/src/manette-backend.c
+index 291da5d..fe408dd 100644
 --- a/src/manette-backend.c
 +++ b/src/manette-backend.c
-@@ -178,8 +178,8 @@ manette_backend_rumble (ManetteBackend *self,
- void
+@@ -179,8 +179,8 @@ void
  manette_backend_emit_event (ManetteBackend *self,
                              ManetteEvent   *event)
  {
@@ -13,17 +13,66 @@ diff --git a/src/manette-backend.c b/src/manette-backend.c
  
    g_signal_emit (self, signals[SIGNAL_EVENT], 0, event);
  }
+diff --git a/src/manette-evdev-backend.c b/src/manette-evdev-backend.c
+index 24e95fb..d33d1e8 100644
+--- a/src/manette-evdev-backend.c
++++ b/src/manette-evdev-backend.c
+@@ -200,10 +200,15 @@ poll_events (GIOChannel          *source,
+              ManetteEvdevBackend *self)
+ {
+   struct input_event evdev_event;
++  gboolean keep;
+ 
+-  g_assert (MANETTE_IS_EVDEV_BACKEND (self));
++  if (!MANETTE_IS_EVDEV_BACKEND (self))
++    return G_SOURCE_REMOVE;
+ 
+-  while (libevdev_has_event_pending (self->evdev_device)) {
++  g_object_ref (self);
++
++  while (self->evdev_device != NULL &&
++         libevdev_has_event_pending (self->evdev_device)) {
+     if (libevdev_next_event (self->evdev_device,
+                              (guint) LIBEVDEV_READ_FLAG_NORMAL,
+                              &evdev_event) == 0) {
+@@ -211,7 +216,10 @@ poll_events (GIOChannel          *source,
+     }
+   }
+ 
+-  return TRUE;
++  keep = self->event_source_id != 0;
++  g_object_unref (self);
++
++  return keep;
+ }
+ 
+ static void
 diff --git a/src/manette-hid-backend.c b/src/manette-hid-backend.c
+index 6e8c675..61a3046 100644
 --- a/src/manette-hid-backend.c
 +++ b/src/manette-hid-backend.c
-@@ -93,6 +93,8 @@ manette_hid_backend_initialize (ManetteBackend *backend)
-   ManetteHidBackend *self = MANETTE_HID_BACKEND (backend);
-   const struct hid_device_info *info;
-   g_autoptr (GError) error = NULL;
-   guint poll_rate;
+@@ -51,13 +51,21 @@ static gboolean
+ poll_events (ManetteHidBackend *self)
+ {
+   guint64 time;
++  gboolean keep;
  
-+  return FALSE;
+-  g_assert (MANETTE_IS_HID_BACKEND (self));
++  if (!MANETTE_IS_HID_BACKEND (self))
++    return G_SOURCE_REMOVE;
 +
-   self->hid = hid_open_path (self->filename);
-   if (!self->hid) {
-     g_debug ("Failed to open hid device: %ls", hid_error (NULL));
++  g_object_ref (self);
+ 
+   time = g_get_monotonic_time ();
+-  manette_hid_driver_poll (self->driver, time);
++  if (self->driver != NULL)
++    manette_hid_driver_poll (self->driver, time);
++
++  keep = self->event_source_id != 0 ? G_SOURCE_CONTINUE : G_SOURCE_REMOVE;
++  g_object_unref (self);
+ 
+-  return G_SOURCE_CONTINUE;
++  return keep;
+ }
+ 
+ static void
