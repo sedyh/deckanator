@@ -14,6 +14,26 @@ finish-args:
   - --env=GST_PLUGIN_FEATURE_RANK=openh264enc:NONE,openh264dec:NONE
 
 modules:
+  - name: libmanette
+    buildsystem: meson
+    config-opts:
+      - -Dintrospection=false
+      - -Dvapi=false
+      - -Dbuild-tests=false
+      - -Ddemos=false
+      - -Ddoc=false
+    sources:
+      - type: git
+        url: https://gitlab.gnome.org/GNOME/libmanette.git
+        tag: '0.2.13'
+      - type: patch
+        path: patches/libmanette-disable-hid-backend.patch
+    cleanup:
+      - /include
+      - /lib/pkgconfig
+      - /share/gir-1.0
+      - /share/vala
+
   - name: deckanator
     buildsystem: simple
     build-commands:
