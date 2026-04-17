@@ -38,6 +38,8 @@ const lastKeyActivity = new Map()
 
 const consumed = new Map()
 const lastAccepted = new Map()
+const pendingRelease = new Map()
+const KEYUP_RELEASE_DELAY_MS = 150
 
 let pollTimer = null
 let started = false
@@ -114,6 +116,29 @@ function releaseConsumed(key) {
   const t = consumed.get(key)
   if (t) clearTimeout(t)
   consumed.delete(key)
+  cancelPendingRelease(key)
+}
+
+function cancelPendingRelease(key) {
+  const t = pendingRelease.get(key)
+  if (t) { clearTimeout(t); pendingRelease.delete(key) }
+}
+
+// On native keyup we don't release `consumed` immediately. Steam Input can
+// deliver autorepeat as keydown/keyup/keydown pairs without e.repeat=true,
+// and an eager release would let every other press through. We defer the
+// release, and every fresh keyup reschedules it, so as long as the key is
+// being autorepeated `consumed` stays latched. A genuine release (no new
+// keydown for 150ms) finally fires the release and unlatches the key.
+function scheduleReleaseConsumed(key) {
+  cancelPendingRelease(key)
+  const t = setTimeout(() => {
+    pendingRelease.delete(key)
+    const ct = consumed.get(key)
+    if (ct) clearTimeout(ct)
+    consumed.delete(key)
+  }, KEYUP_RELEASE_DELAY_MS)
+  pendingRelease.set(key, t)
 }
 
 function evalKeys(def) {
@@ -191,7 +216,14 @@ function dispatchSynthetic(emitKey) {
       bubbles: true,
       cancelable: true,
     })
-    window.dispatchEvent(ev)
+    // Dispatch to the focused element so component-local keydown handlers
+    // (e.g. SteamSelect dropdown on the trigger button) receive the event.
+    // It still bubbles up to window for the global router.
+    const ae = document.activeElement
+    const target = ae && ae !== document.body && ae !== document.documentElement
+      ? ae
+      : window
+    target.dispatchEvent(ev)
   } catch (err) {
     console.error('[input] dispatchSynthetic', err)
   }
@@ -282,7 +314,11 @@ function onKeyDown(e) {
 function onKeyUp(e) {
   if (!e.isTrusted) return
   if (e.code) { keyCodesDown.delete(e.code); lastKeyActivity.delete('code:' + e.code) }
-  if (e.key) { keyKeysDown.delete(e.key); lastKeyActivity.delete('key:' + e.key); releaseConsumed(e.key) }
+  if (e.key) {
+    keyKeysDown.delete(e.key)
+    lastKeyActivity.delete('key:' + e.key)
+    scheduleReleaseConsumed(e.key)
+  }
 }
 
 function onBlur() {
@@ -291,6 +327,8 @@ function onBlur() {
   lastKeyActivity.clear()
   for (const [, t] of consumed) clearTimeout(t)
   consumed.clear()
+  for (const [, t] of pendingRelease) clearTimeout(t)
+  pendingRelease.clear()
   lastAccepted.clear()
 }
 
@@ -331,6 +369,8 @@ export function destroy() {
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
   for (const [, t] of consumed) clearTimeout(t)
   consumed.clear()
+  for (const [, t] of pendingRelease) clearTimeout(t)
+  pendingRelease.clear()
   lastAccepted.clear()
   actionDefs.clear()
   actionState.clear()
