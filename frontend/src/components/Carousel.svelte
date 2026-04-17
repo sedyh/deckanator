@@ -55,6 +55,10 @@
     if (mode === 'action') { mode = 'nav'; return true }
     return false
   }
+  export function editCommit()    { if (mode !== 'edit') return false; commitEdit();  return true }
+  export function editCancel()    { if (mode !== 'edit') return false; cancelEdit();  return true }
+  export function editNextField() { if (mode !== 'edit') return false; if (editField === 'name') switchEditField('nick'); return true }
+  export function editPrevField() { if (mode !== 'edit') return false; if (editField === 'nick') switchEditField('name'); return true }
   let editValue = ''
   let editNick  = ''
   let editField = 'name'  // 'name' | 'nick'
@@ -212,12 +216,7 @@
                   placeholder="Name"
                   maxlength="15"
                   bind:value={editValue}
-                    on:blur={(e) => { if (mode === 'edit' && !(e.currentTarget?.closest('.card-label')?.contains(/** @type {Node} */ (e.relatedTarget)))) commitEdit(false) }}
-                    on:keydown={(e) => {
-                      if (e.key === 'Enter')     { e.stopPropagation(); commitEdit() }
-                      if (e.key === 'Escape')    { e.stopPropagation(); cancelEdit() }
-                      if (e.key === 'ArrowDown') { e.stopPropagation(); switchEditField('nick') }
-                    }}
+                  on:blur={(e) => { if (mode === 'edit' && !(e.currentTarget?.closest('.card-label')?.contains(/** @type {Node} */ (e.relatedTarget)))) commitEdit(false) }}
                   on:focus={() => editField = 'name'}
                 />
               </div>
@@ -230,11 +229,6 @@
                   maxlength="16"
                   bind:value={editNick}
                   on:blur={(e) => { if (mode === 'edit' && !(e.currentTarget?.closest('.card-label')?.contains(/** @type {Node} */ (e.relatedTarget)))) commitEdit(false) }}
-                  on:keydown={(e) => {
-                    if (e.key === 'Enter')   { e.stopPropagation(); commitEdit() }
-                    if (e.key === 'Escape')  { e.stopPropagation(); cancelEdit() }
-                    if (e.key === 'ArrowUp') { e.stopPropagation(); switchEditField('name') }
-                  }}
                   on:focus={() => editField = 'nick'}
                 />
                 <span class="label-id">#{item.id}</span>

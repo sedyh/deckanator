@@ -293,7 +293,15 @@
       }
     }
 
-    if (carouselMode === 'edit') return
+    // Edit mode: route special keys through Carousel. Letter keys and other
+    // unhandled keys fall through the native input for normal typing.
+    if (carouselMode === 'edit') {
+      if (e.key === 'Enter')     { e.preventDefault(); carouselRef?.editCommit();    return }
+      if (e.key === 'Escape')    { e.preventDefault(); carouselRef?.editCancel();    return }
+      if (e.key === 'ArrowDown') { e.preventDefault(); carouselRef?.editNextField(); return }
+      if (e.key === 'ArrowUp')   { e.preventDefault(); carouselRef?.editPrevField(); return }
+      return
+    }
 
     // Route action-mode navigation through Carousel methods, since synthetic
     // events dispatched to window don't bubble down to Carousel's element
