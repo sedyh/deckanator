@@ -12,6 +12,7 @@
   import ActionButton   from './components/ActionButton.svelte'
   import ModsScreen     from './components/ModsScreen.svelte'
   import { GlyphA, GlyphB, GlyphY, GlyphDPadH, GlyphDPadV, IconPlus } from './lib/icons.js'
+  import { trackFire, wasFiredRecently } from './lib/gamepad.js'
 
   let profiles        = []
   let icons           = []
@@ -98,7 +99,10 @@
   let gamepadCount = 0
 
   function fireKey(key) {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
+    if (wasFiredRecently(key)) return
+    trackFire(key)
+    const target = document.activeElement ?? document.body
+    target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
   }
 
   function pollGamepads() {
@@ -371,6 +375,8 @@
   }
 
   function handleGlobalKey(e) {
+    // Skip native events that are duplicates of synthetic gamepad fires
+    if (e.isTrusted && wasFiredRecently(e.key)) return
     if (modsOpen) return
     if (document.querySelector('.wrap.open')) return
 

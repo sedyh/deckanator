@@ -5,6 +5,7 @@
   } from '../../wailsjs/go/internal/App.js'
   import SteamSelect from './SteamSelect.svelte'
   import { IconSearch, IconTrash, IconArrowLeft, IconDownload, IconBan } from '../lib/icons.js'
+  import { wasFiredRecently } from '../lib/gamepad.js'
 
   export let profile
   export let onClose = () => {}
@@ -250,6 +251,7 @@
   }
 
   function handleKey(e) {
+    if (e.isTrusted && wasFiredRecently(e.key)) return
     if (document.querySelector('.wrap.open')) return
 
     if (e.key === 'Escape') {
@@ -649,8 +651,7 @@
     display: flex;
     gap: 1.5rem;
     width: min(54rem, calc(100vw - 2rem));
-    height: calc(100vh - 5rem);
-    max-height: 30rem;
+    height: calc(100vh - 2rem);
   }
 
   /* ── Left column ── */
