@@ -87,58 +87,86 @@
     15: 'ArrowRight',
   }
   const STICK_THRESHOLD = 0.5
+  const POLL_INTERVAL_MS = 8
 
-  let rafId = null
+  // aggregate state across ALL gamepads to avoid duplicates from
+  // multiple virtual controllers (Steam Deck reports physical + Steam Input)
+  const btnState  = {}  // key → bool: any gamepad pressing this?
+  const axisState = {}  // 'h'|'v' → current direction key or null
+
+  let pollTimer    = null
   let gamepadCount = 0
-  const btnPressed = {}
-  const axisState  = {}
 
   function fireKey(key) {
     window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
   }
 
   function pollGamepads() {
+    const next = {}  // key → bool
+
     for (const gp of navigator.getGamepads()) {
       if (!gp) continue
 
       for (const [idx, key] of Object.entries(BUTTON_MAP)) {
-        const pressed = gp.buttons[idx]?.pressed ?? false
-        if (pressed && !btnPressed[idx]) fireKey(key)
-        btnPressed[idx] = pressed
+        if (gp.buttons[idx]?.pressed) next[key] = true
       }
 
       // Y button (index 3) → open Mods
-      const yPressed = gp.buttons[3]?.pressed ?? false
-      if (yPressed && !btnPressed['y']) { if (profile && !modsOpen) modsOpen = true }
-      btnPressed['y'] = yPressed
+      if (gp.buttons[3]?.pressed) next['__y'] = true
 
+      // analog stick — take highest magnitude across all gamepads
       const lx = gp.axes[0] ?? 0
       const ly = gp.axes[1] ?? 0
-      const hKey = lx < -STICK_THRESHOLD ? 'ArrowLeft' : lx > STICK_THRESHOLD ? 'ArrowRight' : null
-      const vKey = ly < -STICK_THRESHOLD ? 'ArrowUp'   : ly > STICK_THRESHOLD  ? 'ArrowDown'  : null
-      if (hKey !== axisState.h) { axisState.h = hKey; if (hKey) fireKey(hKey) }
-      if (vKey !== axisState.v) { axisState.v = vKey; if (vKey) fireKey(vKey) }
+      if (Math.abs(lx) > STICK_THRESHOLD) {
+        const k = lx < 0 ? 'ArrowLeft' : 'ArrowRight'
+        if (!next['__haxis'] || Math.abs(lx) > (next['__hval'] ?? 0)) {
+          next['__haxis'] = k; next['__hval'] = Math.abs(lx)
+        }
+      }
+      if (Math.abs(ly) > STICK_THRESHOLD) {
+        const k = ly < 0 ? 'ArrowUp' : 'ArrowDown'
+        if (!next['__vaxis'] || Math.abs(ly) > (next['__vval'] ?? 0)) {
+          next['__vaxis'] = k; next['__vval'] = Math.abs(ly)
+        }
+      }
     }
-    rafId = requestAnimationFrame(pollGamepads)
+
+    // edge detection: fire once per press, from any gamepad
+    for (const [idx, key] of Object.entries(BUTTON_MAP)) {
+      const was = btnState[key] ?? false
+      const is  = next[key] ?? false
+      if (is && !was) fireKey(key)
+      btnState[key] = is
+    }
+
+    // Y button
+    const yWas = btnState['__y'] ?? false
+    const yIs  = next['__y'] ?? false
+    if (yIs && !yWas && profile && !modsOpen) modsOpen = true
+    btnState['__y'] = yIs
+
+    // analog stick (fire on direction change, not on every frame)
+    const hKey = next['__haxis'] ?? null
+    const vKey = next['__vaxis'] ?? null
+    if (hKey !== axisState.h) { axisState.h = hKey; if (hKey) fireKey(hKey) }
+    if (vKey !== axisState.v) { axisState.v = vKey; if (vKey) fireKey(vKey) }
   }
 
   function startPolling() {
-    if (!rafId) rafId = requestAnimationFrame(pollGamepads)
+    if (!pollTimer) pollTimer = setInterval(pollGamepads, POLL_INTERVAL_MS)
   }
 
-  window.addEventListener('gamepadconnected', e => {
-    gamepadCount++
-    startPolling()
-  })
-  window.addEventListener('gamepaddisconnected', e => {
+  function stopPolling() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+  }
+
+  window.addEventListener('gamepadconnected', () => { gamepadCount++; startPolling() })
+  window.addEventListener('gamepaddisconnected', () => {
     gamepadCount = Math.max(0, gamepadCount - 1)
-    if (gamepadCount === 0 && rafId) {
-      cancelAnimationFrame(rafId)
-      rafId = null
-    }
+    if (gamepadCount === 0) stopPolling()
   })
 
-  onDestroy(() => { if (rafId) cancelAnimationFrame(rafId) })
+  onDestroy(stopPolling)
 
   // ─────────────────────────────────────────────────────────────────────────
 
