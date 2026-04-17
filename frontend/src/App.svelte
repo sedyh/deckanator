@@ -12,7 +12,7 @@
   import ActionButton   from './components/ActionButton.svelte'
   import ModsScreen     from './components/ModsScreen.svelte'
   import { GlyphA, GlyphB, GlyphY, GlyphDPadH, GlyphDPadV, IconPlus } from './lib/icons.js'
-  import { trackFire, wasFiredRecently } from './lib/gamepad.js'
+  import { tryActivate, release } from './lib/gamepad.js'
 
   let profiles        = []
   let icons           = []
@@ -99,8 +99,7 @@
   let gamepadCount = 0
 
   function fireKey(key) {
-    if (wasFiredRecently(key)) return
-    trackFire(key)
+    if (!tryActivate(key)) return
     window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
   }
 
@@ -134,11 +133,12 @@
       }
     }
 
-    // edge detection: fire once per press, from any gamepad
+    // edge detection: fire once per press, release action when button is let go
     for (const [idx, key] of Object.entries(BUTTON_MAP)) {
       const was = btnState[key] ?? false
       const is  = next[key] ?? false
       if (is && !was) fireKey(key)
+      if (!is && was) release(key)
       btnState[key] = is
     }
 
@@ -146,6 +146,7 @@
     const yWas = btnState['__y'] ?? false
     const yIs  = next['__y'] ?? false
     if (yIs && !yWas && profile && !modsOpen) modsOpen = true
+    if (!yIs && yWas) release('__y')
     btnState['__y'] = yIs
 
     // analog stick (fire on direction change, not on every frame)
@@ -374,9 +375,14 @@
   }
 
   function handleGlobalKey(e) {
-    // Skip native events that are duplicates of synthetic gamepad fires
-    if (e.isTrusted && wasFiredRecently(e.key)) return
-    if (modsOpen) return
+    // Deduplicate: native events from Steam Input and our synthetic events
+    // map to the same action - only the first activation wins
+    if (!tryActivate(e.key)) return
+    // For native events, release action on keyup (gamepad polling handles its own releases)
+    if (e.isTrusted) {
+      window.addEventListener('keyup', ev => { if (ev.key === e.key) release(e.key) }, { once: true })
+    }
+    if (modsOpen) { release(e.key); return }
     if (document.querySelector('.wrap.open')) return
 
     if (e.code === 'KeyM') {

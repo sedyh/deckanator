@@ -1,14 +1,18 @@
-// Shared gamepad fire tracker.
-// Allows components to skip native (isTrusted) keyboard events
-// that are duplicates of synthetic events we already dispatched.
-const COOLDOWN_MS = 120
+// Abstract action state shared between gamepad polling and keyboard handlers.
+// Prevents duplicate navigation when both Steam Input and our polling fire
+// for the same physical button press.
 
-const lastFired = {}
+const active = new Set()
 
-export function trackFire(key) {
-  lastFired[key] = Date.now()
+// Try to activate an action. Returns true if this is the first activation
+// (i.e. the action was not already active). Call this before processing.
+export function tryActivate(key) {
+  if (active.has(key)) return false
+  active.add(key)
+  return true
 }
 
-export function wasFiredRecently(key) {
-  return !!lastFired[key] && Date.now() - lastFired[key] < COOLDOWN_MS
+// Mark an action as released so the next press is accepted.
+export function release(key) {
+  active.delete(key)
 }

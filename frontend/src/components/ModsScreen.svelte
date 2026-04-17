@@ -5,7 +5,7 @@
   } from '../../wailsjs/go/internal/App.js'
   import SteamSelect from './SteamSelect.svelte'
   import { IconSearch, IconTrash, IconArrowLeft, IconDownload, IconBan } from '../lib/icons.js'
-  import { wasFiredRecently } from '../lib/gamepad.js'
+  import { tryActivate, release } from '../lib/gamepad.js'
 
   export let profile
   export let onClose = () => {}
@@ -251,8 +251,11 @@
   }
 
   function handleKey(e) {
-    if (e.isTrusted && wasFiredRecently(e.key)) return
-    if (document.querySelector('.wrap.open')) return
+    if (!tryActivate(e.key)) return
+    if (e.isTrusted) {
+      window.addEventListener('keyup', ev => { if (ev.key === e.key) release(e.key) }, { once: true })
+    }
+    if (document.querySelector('.wrap.open')) { release(e.key); return }
 
     if (e.key === 'Escape') {
       e.preventDefault(); e.stopPropagation()
