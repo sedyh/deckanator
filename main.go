@@ -18,6 +18,17 @@ var assets embed.FS
 
 var version = "dev"
 
+func dumpMaps() {
+	data, err := os.ReadFile("/proc/self/maps")
+	if err != nil {
+		return
+	}
+	out := "/tmp/deckanator-maps.txt"
+	if err := os.WriteFile(out, data, 0644); err == nil {
+		fmt.Fprintf(os.Stderr, "maps dumped to %s (%d bytes)\n", out, len(data))
+	}
+}
+
 func logLibmanette() {
 	roots := []string{"/app/lib", "/app/lib64", "/usr/lib/x86_64-linux-gnu", "/usr/lib"}
 	for _, root := range roots {
@@ -54,6 +65,7 @@ func logLibmanette() {
 func main() {
 	fmt.Fprintf(os.Stderr, "Deckanator %s\n", version)
 	logLibmanette()
+	dumpMaps()
 
 	a := internal.New()
 
