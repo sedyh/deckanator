@@ -1,21 +1,23 @@
 // Godot-like input action system.
 //
 // Problems this solves on Steam Deck WebKit2GTK:
-//   1. D-Pad autorepeat after ~1s hold (Steam Input forwards OS autorepeat).
+//   1. D-Pad autorepeat after ~1s hold (Steam Input forwards OS autorepeat,
+//      sometimes as keydown/keyup pairs that bypass e.repeat).
 //   2. Duplicate events when Steam Input native keyboard races with our
 //      gamepad polling.
-//   3. Sticks randomly missing direction changes between polls.
-//   4. Stale keys when a native keyup is lost (app loses focus during nav).
+//   3. libmanette asserts in WebKit Gamepad backend if getGamepads() is
+//      called before the backend is fully initialized. We gate polling on
+//      gamepadconnected and delay the first poll.
+//   4. Diagonal stick input used to trigger both axes; now a perpendicular
+//      axis can suppress its neighbour via requirePairUnder.
 //
-// Design (no interception to avoid past WebKit2GTK crashes):
+// Design:
 //   - Actions named with multiple triggers (keys, buttons, axes).
-//   - Native events are tracked in bubble phase only; never preventDefault'd.
-//   - Autorepeat is filtered by each keydown handler via consumeKey().
-//   - consumeKey() is a central dedup: rejects a key that's already in flight
-//     until the matching keyup arrives (or a safety timeout elapses).
-//   - Gamepad poll at 16ms with stick hysteresis (enter 0.5, exit 0.3).
-//   - Synthetic keydowns are only dispatched for gamepad-only presses so we
-//     don't double-fire when Steam Input already sent a native event.
+//   - Native events tracked in bubble phase; never preventDefault'd.
+//   - consumeKey() debounces keydown per logical key (TTL + min-gap) so
+//     autorepeat and native<->synthetic races can't double-fire.
+//   - Gamepad poll starts only after the first gamepadconnected event and
+//     a 500ms warm-up to avoid libmanette init-time asserts.
 
 const POLL_MS = 16
 const DEFAULT_DEADZONE = 0.5
@@ -23,6 +25,8 @@ const AXIS_RELEASE_DEADZONE = 0.3
 const NATIVE_SAFETY_MS = 1500
 const SYNTHETIC_HOLD_MS = 200
 const STALE_KEY_MS = 500
+const MIN_ACCEPT_GAP_MS = 100
+const GAMEPAD_WARMUP_MS = 500
 
 const actionDefs = new Map()
 const actionState = new Map()
@@ -33,9 +37,12 @@ const keyKeysDown = new Set()
 const lastKeyActivity = new Map()
 
 const consumed = new Map()
+const lastAccepted = new Map()
 
 let pollTimer = null
 let started = false
+let gamepadReady = false
+let gamepadReadyAt = 0
 
 export function registerAction(name, triggers, emitKey = null) {
   actionDefs.set(name, { triggers, emitKey })
@@ -79,19 +86,27 @@ export function onJustReleased(name, cb) {
   }
 }
 
-// Call at the top of every keydown handler. Returns true if the event should
-// be processed; false if it's a duplicate (autorepeat, Steam Input echo,
-// native+gamepad race). State is cleared on native keyup, synthetic timeout,
-// or a safety timeout so things never get permanently stuck.
+// Call at the top of every keydown handler. Rejects a keydown when:
+//   - it's browser autorepeat (e.repeat === true),
+//   - the same key already accepted a press that hasn't been released yet
+//     (consumed map, released on keyup or TTL),
+//   - the same key was accepted less than MIN_ACCEPT_GAP_MS ago (catches
+//     Steam Input's keydown/keyup/keydown autorepeat that bypasses e.repeat).
 export function consumeKey(e) {
   if (e.repeat) return false
   const key = e.key
   if (!key) return true
+
+  const now = performance.now()
+  const prev = lastAccepted.get(key) ?? 0
+  if (now - prev < MIN_ACCEPT_GAP_MS) return false
+
   if (consumed.has(key)) return false
 
   const ttl = e.isTrusted ? NATIVE_SAFETY_MS : SYNTHETIC_HOLD_MS
   const timer = setTimeout(() => consumed.delete(key), ttl)
   consumed.set(key, timer)
+  lastAccepted.set(key, now)
   return true
 }
 
@@ -111,12 +126,17 @@ function evalKeys(def) {
   return false
 }
 
+function safeGetGamepads() {
+  if (!gamepadReady) return null
+  if (performance.now() - gamepadReadyAt < GAMEPAD_WARMUP_MS) return null
+  try { return navigator.getGamepads ? navigator.getGamepads() : null }
+  catch (err) { console.error('[input] getGamepads', err); return null }
+}
+
 function evalGamepad(def, wasPressed) {
   let pressed = false
   let strength = 0
-  let pads
-  try { pads = navigator.getGamepads ? navigator.getGamepads() : [] }
-  catch { return { pressed: false, strength: 0 } }
+  const pads = safeGetGamepads()
   if (!pads) return { pressed: false, strength: 0 }
 
   for (const t of def.triggers) {
@@ -138,10 +158,17 @@ function evalGamepad(def, wasPressed) {
         const gp = pads[i]
         if (!gp || !gp.axes) continue
         const raw = (gp.axes[t.index] ?? 0) * (t.sign ?? 1)
-        if (raw > dz) {
-          pressed = true
-          if (raw > strength) strength = raw
+        if (raw <= dz) continue
+        // requirePairUnder: suppress this axis when the paired perpendicular
+        // axis exceeds its threshold. Used to bias diagonal stick input to
+        // vertical only, so carousel (horizontal) triggers only on strictly
+        // horizontal stick motion.
+        if (t.requirePairUnder) {
+          const other = Math.abs(gp.axes[t.requirePairUnder.axis] ?? 0)
+          if (other > t.requirePairUnder.threshold) continue
         }
+        pressed = true
+        if (raw > strength) strength = raw
       }
     }
   }
@@ -264,6 +291,22 @@ function onBlur() {
   lastKeyActivity.clear()
   for (const [, t] of consumed) clearTimeout(t)
   consumed.clear()
+  lastAccepted.clear()
+}
+
+function onGamepadConnected() {
+  if (!gamepadReady) {
+    gamepadReady = true
+    gamepadReadyAt = performance.now()
+  }
+}
+
+function onGamepadDisconnected() {
+  try {
+    const pads = navigator.getGamepads ? navigator.getGamepads() : null
+    const anyLeft = pads && Array.from(pads).some(p => p != null)
+    if (!anyLeft) gamepadReady = false
+  } catch { gamepadReady = false }
 }
 
 export function init() {
@@ -272,6 +315,8 @@ export function init() {
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
   window.addEventListener('blur', onBlur)
+  window.addEventListener('gamepadconnected', onGamepadConnected)
+  window.addEventListener('gamepaddisconnected', onGamepadDisconnected)
   pollTimer = setInterval(update, POLL_MS)
 }
 
@@ -281,9 +326,12 @@ export function destroy() {
   window.removeEventListener('keydown', onKeyDown)
   window.removeEventListener('keyup', onKeyUp)
   window.removeEventListener('blur', onBlur)
+  window.removeEventListener('gamepadconnected', onGamepadConnected)
+  window.removeEventListener('gamepaddisconnected', onGamepadDisconnected)
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
   for (const [, t] of consumed) clearTimeout(t)
   consumed.clear()
+  lastAccepted.clear()
   actionDefs.clear()
   actionState.clear()
   listeners.pressed.clear()
@@ -291,4 +339,5 @@ export function destroy() {
   keyCodesDown.clear()
   keyKeysDown.clear()
   lastKeyActivity.clear()
+  gamepadReady = false
 }

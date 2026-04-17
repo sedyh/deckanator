@@ -20,13 +20,15 @@ export function setupActions() {
   registerAction('ui_left', [
     { type: 'key', key: 'ArrowLeft' },
     { type: 'button', index: 14 },
-    { type: 'axis', index: 0, sign: -1 },
+    // Diagonal stick motion biases to vertical: horizontal fires only when
+    // the perpendicular (Y) axis is quiet.
+    { type: 'axis', index: 0, sign: -1, requirePairUnder: { axis: 1, threshold: 0.4 } },
   ], { key: 'ArrowLeft' })
 
   registerAction('ui_right', [
     { type: 'key', key: 'ArrowRight' },
     { type: 'button', index: 15 },
-    { type: 'axis', index: 0, sign: 1 },
+    { type: 'axis', index: 0, sign: 1, requirePairUnder: { axis: 1, threshold: 0.4 } },
   ], { key: 'ArrowRight' })
 
   registerAction('ui_accept', [
