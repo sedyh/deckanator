@@ -32,7 +32,15 @@ jobs:
             pkg-config \
             build-essential
 
+      - name: Cache Wails binary
+        id: cache-wails
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin/wails
+          key: wails-v2.12.0-linux
+
       - name: Install Wails
+        if: steps.cache-wails.outputs.cache-hit != 'true'
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
 
       - name: Build
@@ -61,7 +69,15 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Cache Wails binary
+        id: cache-wails
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin/wails
+          key: wails-v2.12.0-macos
+
       - name: Install Wails
+        if: steps.cache-wails.outputs.cache-hit != 'true'
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
 
       - name: Build
@@ -110,7 +126,15 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Cache Wails binary
+        id: cache-wails
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin/wails.exe
+          key: wails-v2.12.0-windows
+
       - name: Install Wails
+        if: steps.cache-wails.outputs.cache-hit != 'true'
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
 
       - name: Build
