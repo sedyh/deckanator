@@ -250,6 +250,7 @@
   }
 
   function handleKey(e) {
+    if (e.repeat) return
     if (document.querySelector('.wrap.open')) return
 
     if (e.key === 'Escape') {

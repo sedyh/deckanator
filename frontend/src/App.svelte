@@ -282,6 +282,7 @@
   }
 
   function handleGlobalKey(e) {
+    if (e.repeat) return
     if (modsOpen) return
     if (document.querySelector('.wrap.open')) return
 

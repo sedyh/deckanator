@@ -83,6 +83,7 @@
   }
 
   function handleKeydown(e) {
+    if (e.repeat) return
     if (!open) {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault()

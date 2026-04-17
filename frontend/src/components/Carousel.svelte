@@ -136,6 +136,7 @@
   })
 
   function handleKeydown(e) {
+    if (e.repeat) return
     if (mode === 'edit') return  // input handles Enter/Escape with stopPropagation
 
     if (mode === 'action') {
