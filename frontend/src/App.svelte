@@ -101,8 +101,7 @@
   function fireKey(key) {
     if (wasFiredRecently(key)) return
     trackFire(key)
-    const target = document.activeElement ?? document.body
-    target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
   }
 
   function pollGamepads() {
