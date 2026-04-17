@@ -99,8 +99,8 @@ func (a *App) GetModVersions(projectID, mcVersion, projectType, loader string) (
 	return GetModVersions(projectID, mcVersion, projectType, loader)
 }
 
-func (a *App) InstallMod(profileID, projectID, title, projectType, versionID, downloadURL, filename string) error {
-	return InstallMod(profileID, projectID, title, projectType, versionID, downloadURL, filename)
+func (a *App) InstallMod(profileID, projectID, title, description, projectType, iconURL, versionID, downloadURL, filename string) error {
+	return InstallMod(profileID, projectID, title, description, projectType, iconURL, versionID, downloadURL, filename)
 }
 
 func (a *App) DeleteMod(profileID, projectID string) error {
@@ -109,6 +109,10 @@ func (a *App) DeleteMod(profileID, projectID string) error {
 
 func (a *App) ListMods(profileID string) ([]InstalledMod, error) {
 	return ListMods(profileID)
+}
+
+func (a *App) FetchModInfo(profileID, projectID string) (ModInfo, error) {
+	return FetchModInfo(profileID, projectID)
 }
 
 func (a *App) Launch(profileID string) error {

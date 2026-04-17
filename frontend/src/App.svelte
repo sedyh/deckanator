@@ -42,6 +42,8 @@
     ? mcVersions.filter(v => fabricGameVersions.has(v.id))
     : mcVersions
 
+  let appReady            = false
+
   let installed           = false
   let installing          = false
   let launching           = false
@@ -153,6 +155,7 @@
     await checkAllInstalled()
     _prevProfileId = ''
 
+    appReady = true
     startPolling()
   })
 
@@ -418,6 +421,12 @@
 <svelte:window on:keydown={handleGlobalKey} />
 
 <div class="app">
+  <div class="splash" class:splash-gone={appReady} aria-hidden="true">
+    <svg class="splash-spinner" viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="16" />
+    </svg>
+  </div>
+
   {#if modsOpen && profile}
     <ModsScreen {profile} onClose={() => {
       modsOpen = false
@@ -636,13 +645,43 @@
   }
   .new-profile-icon :global(svg) { width: 0.78rem; height: 0.78rem; }
 
-  .divider {
-    height: 1px;
-    background: rgba(255,255,255,0.06);
-  }
-
   .spacer {
     height: 0.89rem;
+  }
+
+  /* ── Splash ── */
+  .splash {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    transition: opacity 350ms ease;
+    pointer-events: all;
+  }
+  .splash-gone {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .splash-spinner {
+    width: 3rem;
+    height: 3rem;
+    animation: spin 1s linear infinite;
+  }
+  .splash-spinner circle {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-dasharray: 60 40;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
   }
 
   /* ── Footer ── */

@@ -2,7 +2,9 @@
 
 The only controller-friendly Minecraft launcher for Steam Deck.
 
-<img width="1392" height="944" alt="Screenshot 2026-04-15 at 06 06 10" src="https://github.com/user-attachments/assets/dcd30f6c-7f7a-4180-844c-7c2d6fc5309e" />
+The only controller-friendly Minecraft launcher for Steam Deck with modding support.
+
+<img width="500" alt="Screenshot 2026-04-17 at 02 54 40" src="https://github.com/user-attachments/assets/565e033c-4808-4c2b-b77e-b51e4a73a379" /> <img width="500" alt="Screenshot 2026-04-17 at 02 54 03" src="https://github.com/user-attachments/assets/f84a0483-8321-49de-8586-b2a85f672259" />
 
 ## Install on Steam Deck
 
@@ -12,12 +14,32 @@ Open a terminal in Desktop Mode (Konsole) and run:
 curl -fsSL https://github.com/sedyh/deckanator/releases/latest/download/install.sh | bash
 ```
 
-The installer will:
-- Download and install the Deckanator binary to `~/.local/share/deckanator/`
-- Create a `.desktop` entry
-- Add Deckanator to Steam with artwork (shortcuts.vdf)
+The script will:
+1. Download and install the Deckanator Flatpak bundle
+2. Download the installer binary and configure Steam integration:
+   - Install icon to `~/.local/share/deckanator/`
+   - Create `.desktop` entries for launch and uninstall
+   - Add Deckanator to Steam with artwork (`shortcuts.vdf`)
+   - Copy grid / poster / hero artwork (existing artwork is preserved)
+   - Restart Steam automatically
 
-Restart Steam after install to see Deckanator in your library.
+Deckanator will appear in your Steam library after restart.
+
+To install a specific version:
+
+```bash
+curl -fsSL https://github.com/sedyh/deckanator/releases/latest/download/install.sh | bash -s v1.0.0
+```
+
+## Uninstall
+
+In Desktop Mode open the "Uninstall Deckanator" entry from the application menu, or run:
+
+```bash
+~/.local/share/deckanator/deckanator-installer --uninstall
+```
+
+This removes the binary, `.desktop` entries, and the Steam shortcut.
 
 ## Update
 
@@ -25,16 +47,16 @@ Re-run the install command - existing Steam artwork is preserved.
 
 ## Steam Artwork
 
-Artwork files are in `cmd/installer/assets/`:
+Artwork is embedded in the installer binary from `cmd/installer/assets/`:
 
 | File | Size | Usage |
 |------|------|-------|
 | `grid.png` | 460x215 | Library horizontal capsule |
 | `poster.png` | 600x900 | Library vertical capsule |
 | `hero.png` | 1920x620 | Game detail hero banner |
-| `icon.png` | any | Icon / logo |
+| `icon.png` | 512x512 | Icon / logo |
 
-Replace these files before building to use custom artwork.
+Replace these files before building the installer to use custom artwork. During install, existing artwork is never overwritten.
 
 ## Donate
 

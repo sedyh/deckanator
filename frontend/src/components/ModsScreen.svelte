@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy, tick } from 'svelte'
   import {
-    SearchMods, GetModVersions, InstallMod, DeleteMod, ListMods
+    SearchMods, GetModVersions, InstallMod, DeleteMod, ListMods, FetchModInfo
   } from '../../wailsjs/go/internal/App.js'
   import SteamSelect from './SteamSelect.svelte'
   import { IconSearch, IconTrash, IconArrowLeft, IconDownload, IconBan } from '../lib/icons.js'
@@ -50,24 +50,27 @@
 
   $: installedSet = new Set(installedMods.map(m => m.project_id))
 
+  $: installedList = installedMods.map(m => {
+      const found = results.find(r => r.project_id === m.project_id)
+      return found ?? {
+        project_id:   m.project_id,
+        title:        m.title,
+        description:  m.description ?? '',
+        icon_url:     m.icon_url ?? '',
+        downloads:    0,
+        project_type: m.project_type ?? 'mod',
+        categories:   m.project_type === 'datapack' ? ['datapack'] : [],
+      }
+    })
+
+  $: effectiveTotal = filterInstalled ? installedList.length : totalHits
+  $: totalPages = Math.max(1, Math.ceil(effectiveTotal / PAGE_SIZE))
+
   $: displayList = filterInstalled
-    ? installedMods.map(m => {
-        const found = results.find(r => r.project_id === m.project_id)
-        return found ?? {
-          project_id:  m.project_id,
-          title:       m.title,
-          description: '',
-          icon_url:    '',
-          downloads:   0,
-          project_type: m.project_type ?? 'mod',
-          categories:  m.project_type === 'datapack' ? ['datapack'] : [],
-        }
-      })
+    ? installedList.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
     : results
 
   $: versionOptions = modVersions.map(v => ({ value: v.id, label: v.version_number }))
-
-  $: totalPages = Math.max(1, Math.ceil(totalHits / PAGE_SIZE))
 
   $: rightZones = buildRightZones(selectedMod, versionOptions)
 
@@ -86,10 +89,28 @@
     { value: 'updated',   label: 'Updated'   },
   ]
 
+  async function fetchMissingInfo(mods) {
+    const missing = mods.filter(m => !m.icon_url || !m.description)
+    if (missing.length === 0) return
+    await Promise.all(missing.map(async m => {
+      try {
+        const info = await FetchModInfo(profile.id, m.project_id)
+        if (info.icon_url || info.description) {
+          installedMods = installedMods.map(x =>
+            x.project_id === m.project_id
+              ? { ...x, icon_url: info.icon_url || x.icon_url, description: info.description || x.description }
+              : x
+          )
+        }
+      } catch (_) {}
+    }))
+  }
+
   onMount(async () => {
     console.log('[mods] mount profile:', profile?.id, 'mcVersion:', profile?.mcVersion, 'loader:', profile?.loader)
     installedMods = await ListMods(profile.id)
     console.log('[mods] installedMods:', installedMods)
+    fetchMissingInfo(installedMods)
     await doSearch()
     await tick()
     searchInputEl?.focus()
@@ -185,7 +206,9 @@
         profile.id,
         selectedMod.project_id,
         selectedMod.title,
+        selectedMod.description ?? '',
         effectiveType,
+        selectedMod.icon_url ?? '',
         ver.id,
         file.url,
         file.filename,
@@ -215,14 +238,14 @@
   async function goPrev() {
     if (page <= 0) return
     page--
-    await doSearch()
+    if (!filterInstalled) await doSearch()
     listIdx = 0
   }
 
   async function goNext() {
     if (page + 1 >= totalPages) return
     page++
-    await doSearch()
+    if (!filterInstalled) await doSearch()
     listIdx = 0
   }
 
@@ -345,6 +368,7 @@
     if (displayList.length === 0) return
     focusCol = 'left'
     listIdx  = Math.min(listIdx, displayList.length - 1)
+    document.activeElement?.blur()
     tick().then(() => scrollToItem(listIdx))
   }
 
@@ -363,7 +387,7 @@
   }
 
   function activateZone(zone) {
-    if      (zone === 'f-installed')  { filterInstalled = !filterInstalled }
+    if      (zone === 'f-installed')  { filterInstalled = !filterInstalled; page = 0 }
     else if (zone === 'f-mods')       { filterMods      = !filterMods;      doSearch(true) }
     else if (zone === 'f-datapacks')  { filterDatapacks = !filterDatapacks; doSearch(true) }
     else if (zone === 'sort')         sortSelRef?.openMenu()
@@ -471,7 +495,7 @@
           bind:this={fInstalledEl}
           class="toggle-row"
           class:zone-focused={focusZone === 'f-installed' && focusCol === 'right'}
-          on:click={() => filterInstalled = !filterInstalled}
+          on:click={() => { filterInstalled = !filterInstalled; page = 0 }}
           on:focus={() => { focusCol = 'right'; focusZone = 'f-installed' }}
           tabindex="-1"
         >
@@ -680,13 +704,13 @@
   .mod-row.focused,
   .mod-row.selected { background: var(--card-btn-hover); }
 
-  .mod-row.focused,
-  .mod-row.selected { box-shadow: inset 0 0 0 2px rgba(255,255,255,0.25); }
+  .mod-row.selected { box-shadow: inset 0 0 0 2px rgba(255,255,255,0.12); }
+  .mod-row.focused  { box-shadow: inset 0 0 0 2px rgba(255,255,255,0.8); }
 
   .mod-icon {
     width: 2.22rem;
     height: 2.22rem;
-    border-radius: 50%;
+    border-radius: 0.22rem;
     display: flex;
     align-items: center;
     justify-content: center;
