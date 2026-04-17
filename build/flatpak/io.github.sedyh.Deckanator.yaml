@@ -28,6 +28,7 @@ modules:
         tag: '0.2.13'
       - type: patch
         path: patches/libmanette-disable-hid-backend.patch
+        use-git: true
     cleanup:
       - /include
       - /lib/pkgconfig
