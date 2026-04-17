@@ -12,7 +12,8 @@
   import ActionButton   from './components/ActionButton.svelte'
   import ModsScreen     from './components/ModsScreen.svelte'
   import { GlyphA, GlyphB, GlyphY, GlyphDPadH, GlyphDPadV, IconPlus } from './lib/icons.js'
-  import { tryActivate, release } from './lib/gamepad.js'
+  import { setupActions } from './lib/actions.js'
+  import { destroy as destroyInput } from './lib/input.js'
 
   let profiles        = []
   let icons           = []
@@ -78,101 +79,8 @@
     if (!installing && p.mcVersion) await checkInstalled()
   }
 
-  // ── Gamepad polling ──────────────────────────────────────────────────────
-  const BUTTON_MAP = {
-    0:  'Enter',
-    1:  'Escape',
-    12: 'ArrowUp',
-    13: 'ArrowDown',
-    14: 'ArrowLeft',
-    15: 'ArrowRight',
-  }
-  const STICK_THRESHOLD = 0.5
-  const POLL_INTERVAL_MS = 8
-
-  // aggregate state across ALL gamepads to avoid duplicates from
-  // multiple virtual controllers (Steam Deck reports physical + Steam Input)
-  const btnState  = {}  // key → bool: any gamepad pressing this?
-  const axisState = {}  // 'h'|'v' → current direction key or null
-
-  let pollTimer    = null
-  let gamepadCount = 0
-
-  function fireKey(key) {
-    if (!tryActivate(key)) return
-    window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
-  }
-
-  function pollGamepads() {
-    const next = {}  // key → bool
-
-    for (const gp of navigator.getGamepads()) {
-      if (!gp) continue
-
-      for (const [idx, key] of Object.entries(BUTTON_MAP)) {
-        if (gp.buttons[idx]?.pressed) next[key] = true
-      }
-
-      // Y button (index 3) → open Mods
-      if (gp.buttons[3]?.pressed) next['__y'] = true
-
-      // analog stick — take highest magnitude across all gamepads
-      const lx = gp.axes[0] ?? 0
-      const ly = gp.axes[1] ?? 0
-      if (Math.abs(lx) > STICK_THRESHOLD) {
-        const k = lx < 0 ? 'ArrowLeft' : 'ArrowRight'
-        if (!next['__haxis'] || Math.abs(lx) > (next['__hval'] ?? 0)) {
-          next['__haxis'] = k; next['__hval'] = Math.abs(lx)
-        }
-      }
-      if (Math.abs(ly) > STICK_THRESHOLD) {
-        const k = ly < 0 ? 'ArrowUp' : 'ArrowDown'
-        if (!next['__vaxis'] || Math.abs(ly) > (next['__vval'] ?? 0)) {
-          next['__vaxis'] = k; next['__vval'] = Math.abs(ly)
-        }
-      }
-    }
-
-    // edge detection: fire once per press, release action when button is let go
-    for (const [idx, key] of Object.entries(BUTTON_MAP)) {
-      const was = btnState[key] ?? false
-      const is  = next[key] ?? false
-      if (is && !was) fireKey(key)
-      if (!is && was) release(key)
-      btnState[key] = is
-    }
-
-    // Y button
-    const yWas = btnState['__y'] ?? false
-    const yIs  = next['__y'] ?? false
-    if (yIs && !yWas && profile && !modsOpen) modsOpen = true
-    if (!yIs && yWas) release('__y')
-    btnState['__y'] = yIs
-
-    // analog stick (fire on direction change, not on every frame)
-    const hKey = next['__haxis'] ?? null
-    const vKey = next['__vaxis'] ?? null
-    if (hKey !== axisState.h) { axisState.h = hKey; if (hKey) fireKey(hKey) }
-    if (vKey !== axisState.v) { axisState.v = vKey; if (vKey) fireKey(vKey) }
-  }
-
-  function startPolling() {
-    if (!pollTimer) pollTimer = setInterval(pollGamepads, POLL_INTERVAL_MS)
-  }
-
-  function stopPolling() {
-    if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
-  }
-
-  window.addEventListener('gamepadconnected', () => { gamepadCount++; startPolling() })
-  window.addEventListener('gamepaddisconnected', () => {
-    gamepadCount = Math.max(0, gamepadCount - 1)
-    if (gamepadCount === 0) stopPolling()
-  })
-
-  onDestroy(stopPolling)
-
-  // ─────────────────────────────────────────────────────────────────────────
+  setupActions()
+  onDestroy(destroyInput)
 
   onMount(async () => {
     EventsOn('install:progress', d => { progress = d; savedProgress = d })
@@ -188,7 +96,6 @@
     _prevProfileId = ''
 
     appReady = true
-    startPolling()
   })
 
   async function loadVersions() {
@@ -375,14 +282,7 @@
   }
 
   function handleGlobalKey(e) {
-    // Deduplicate: native events from Steam Input and our synthetic events
-    // map to the same action - only the first activation wins
-    if (!tryActivate(e.key)) return
-    // For native events, release action on keyup (gamepad polling handles its own releases)
-    if (e.isTrusted) {
-      window.addEventListener('keyup', ev => { if (ev.key === e.key) release(e.key) }, { once: true })
-    }
-    if (modsOpen) { release(e.key); return }
+    if (modsOpen) return
     if (document.querySelector('.wrap.open')) return
 
     if (e.code === 'KeyM') {
