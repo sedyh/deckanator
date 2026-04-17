@@ -27,7 +27,7 @@ modules:
         url: https://gitlab.gnome.org/GNOME/libmanette.git
         tag: '0.2.13'
       - type: patch
-        path: patches/libmanette-disable-hid-backend.patch
+        path: patches/libmanette-steamdeck-uaf.patch
         use-git: true
     cleanup:
       - /include

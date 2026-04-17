@@ -1,0 +1,29 @@
+diff --git a/src/manette-backend.c b/src/manette-backend.c
+--- a/src/manette-backend.c
++++ b/src/manette-backend.c
+@@ -178,8 +178,8 @@ manette_backend_rumble (ManetteBackend *self,
+ void
+ manette_backend_emit_event (ManetteBackend *self,
+                             ManetteEvent   *event)
+ {
+-  g_assert (MANETTE_IS_BACKEND (self));
+-  g_assert (event != NULL);
++  if (!MANETTE_IS_BACKEND (self) || event == NULL)
++    return;
+ 
+   g_signal_emit (self, signals[SIGNAL_EVENT], 0, event);
+ }
+diff --git a/src/manette-hid-backend.c b/src/manette-hid-backend.c
+--- a/src/manette-hid-backend.c
++++ b/src/manette-hid-backend.c
+@@ -93,6 +93,8 @@ manette_hid_backend_initialize (ManetteBackend *backend)
+   ManetteHidBackend *self = MANETTE_HID_BACKEND (backend);
+   const struct hid_device_info *info;
+   g_autoptr (GError) error = NULL;
+   guint poll_rate;
+ 
++  return FALSE;
++
+   self->hid = hid_open_path (self->filename);
+   if (!self->hid) {
+     g_debug ("Failed to open hid device: %ls", hid_error (NULL));
