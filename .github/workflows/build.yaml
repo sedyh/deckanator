@@ -204,8 +204,6 @@ jobs:
           flatpak-builder --force-clean --repo=flatpak-repo flatpak-builddir build/flatpak/io.github.sedyh.Deckanator.yaml
           echo '=== libmanette files in build dir ==='
           find flatpak-builddir/files -name 'libmanette*' -printf '%p %s bytes\n' || true
-          echo '=== libmanette symbols in build dir ==='
-          find flatpak-builddir/files -name 'libmanette-*.so*' -not -type l | head -1 | xargs -r -I{} sh -c 'nm -D {} 2>/dev/null | grep manette_backend_emit_event || strings {} | grep -c "MANETTE_IS_BACKEND" || true'
           flatpak build-bundle flatpak-repo deckanator.flatpak io.github.sedyh.Deckanator
 
       - name: Upload artifact

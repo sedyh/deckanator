@@ -17,6 +17,7 @@ modules:
   - name: libmanette
     buildsystem: meson
     config-opts:
+      - --libdir=lib/x86_64-linux-gnu
       - -Dintrospection=false
       - -Dvapi=false
       - -Dbuild-tests=false
@@ -33,7 +34,7 @@ modules:
         use-git: true
     cleanup:
       - /include
-      - /lib/pkgconfig
+      - /lib/x86_64-linux-gnu/pkgconfig
       - /share/gir-1.0
       - /share/vala
 
