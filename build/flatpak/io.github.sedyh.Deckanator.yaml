@@ -17,7 +17,7 @@ modules:
   - name: libmanette
     buildsystem: meson
     config-opts:
-      - --libdir=lib/x86_64-linux-gnu
+      - --libdir=lib
       - -Dintrospection=false
       - -Dvapi=false
       - -Dbuild-tests=false
@@ -29,12 +29,18 @@ modules:
         sha256: a297eedaf95526de8313f87cf4fbea02cbe1f5cf4b7b30ffa64db63e59b302e9
         mirror-urls:
           - https://gitlab.gnome.org/GNOME/libmanette/-/archive/0.2.13/libmanette-0.2.13.tar.gz
-      - type: patch
+      - type: file
         path: patches/libmanette-steamdeck-uaf.patch
-        use-git: true
+        dest-filename: steamdeck-uaf.patch
+      - type: shell
+        commands:
+          - patch -p1 --verbose --no-backup-if-mismatch < steamdeck-uaf.patch
+          - grep -q "if (!MANETTE_IS_BACKEND" src/manette-backend.c
+          - grep -q "g_object_ref (self)" src/manette-hid-backend.c
+          - grep -q "g_object_ref (self)" src/manette-evdev-backend.c
     cleanup:
       - /include
-      - /lib/x86_64-linux-gnu/pkgconfig
+      - /lib/pkgconfig
       - /share/gir-1.0
       - /share/vala
 

@@ -19,24 +19,35 @@ var assets embed.FS
 var version = "dev"
 
 func logLibmanette() {
-	for _, dir := range []string{"/app/lib", "/app/lib64", "/usr/lib/x86_64-linux-gnu", "/usr/lib"} {
-		matches, err := filepath.Glob(filepath.Join(dir, "libmanette*"))
-		if err != nil || len(matches) == 0 {
-			continue
-		}
-		for _, m := range matches {
-			info, err := os.Lstat(m)
+	roots := []string{"/app/lib", "/app/lib64", "/usr/lib/x86_64-linux-gnu", "/usr/lib"}
+	for _, root := range roots {
+		filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
 			if err != nil {
-				continue
+				return nil
+			}
+			if d.IsDir() {
+				return nil
+			}
+			name := d.Name()
+			if len(name) < 9 || name[:9] != "libmanett" {
+				return nil
+			}
+			info, err := os.Lstat(p)
+			if err != nil {
+				return nil
 			}
 			target := ""
 			if info.Mode()&os.ModeSymlink != 0 {
-				if t, err := os.Readlink(m); err == nil {
+				if t, err := os.Readlink(p); err == nil {
 					target = " -> " + t
 				}
 			}
-			fmt.Fprintf(os.Stderr, "libmanette: %s (%d bytes)%s\n", m, info.Size(), target)
-		}
+			fmt.Fprintf(os.Stderr, "libmanette: %s (%d bytes)%s\n", p, info.Size(), target)
+			return nil
+		})
+	}
+	if v := os.Getenv("LD_LIBRARY_PATH"); v != "" {
+		fmt.Fprintf(os.Stderr, "LD_LIBRARY_PATH=%s\n", v)
 	}
 }
 
