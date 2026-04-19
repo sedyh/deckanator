@@ -25,23 +25,12 @@ modules:
       - -Ddemos=false
       - -Ddoc=false
     sources:
-      - type: archive
-        url: https://github.com/GNOME/libmanette/archive/refs/tags/0.2.13.tar.gz
-        sha256: a297eedaf95526de8313f87cf4fbea02cbe1f5cf4b7b30ffa64db63e59b302e9
-        mirror-urls:
-          - https://gitlab.gnome.org/GNOME/libmanette/-/archive/0.2.13/libmanette-0.2.13.tar.gz
-      - type: file
-        path: patches/libmanette-steamdeck-uaf.patch
-        dest-filename: steamdeck-uaf.patch
+      - type: git
+        url: https://gitlab.gnome.org/GNOME/libmanette.git
+        commit: b083b38874fb2204370c1ee62dd16833eec71aff
       - type: shell
         commands:
-          - patch -p1 --verbose --no-backup-if-mismatch < steamdeck-uaf.patch
-          - grep -q "if (!MANETTE_IS_BACKEND" src/manette-backend.c
-          - grep -q "g_object_ref (self)" src/manette-hid-backend.c
-          - grep -q "g_object_ref (self)" src/manette-evdev-backend.c
-          - grep -q "g_signal_connect_object" src/manette-hid-backend.c
           - grep -q "g_clear_object (&self->driver)" src/manette-hid-backend.c
-          - grep -q "g_signal_handlers_disconnect_by_data" src/manette-hid-backend.c
     cleanup:
       - /include
       - /lib/pkgconfig
