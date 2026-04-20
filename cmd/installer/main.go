@@ -403,10 +403,6 @@ func copyArtwork(steamDir, userID string, appID uint32, iconPath string) error {
 	}
 	for name, data := range files {
 		dst := filepath.Join(gridDir, name)
-		// don't overwrite if user already placed custom artwork
-		if _, err := os.Stat(dst); err == nil {
-			continue
-		}
 		if err := os.WriteFile(dst, data, 0644); err != nil {
 			return err
 		}
@@ -641,7 +637,7 @@ func main() {
 	if err := copyArtwork(steamDir, userID, appID, iconPath); err != nil {
 		fmt.Fprintf(os.Stderr, "    warning: could not copy artwork: %v\n", err)
 	} else {
-		fmt.Println("    done (existing artwork preserved)")
+		fmt.Println("    done")
 	}
 
 	// Restart Steam so it picks up the new shortcuts
