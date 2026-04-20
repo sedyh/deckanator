@@ -12,7 +12,7 @@ finish-args:
   - --filesystem=home
   - --device=all
   - --env=GST_PLUGIN_FEATURE_RANK=openh264enc:NONE,openh264dec:NONE
-  - --env=JSC_SIGNAL_FOR_GC=40
+  - --env=GTK_MODULES=
 
 modules:
   - name: libmanette

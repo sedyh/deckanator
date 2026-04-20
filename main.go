@@ -4,7 +4,6 @@ import (
 	"embed"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"deckanator/internal"
 
@@ -18,58 +17,8 @@ var assets embed.FS
 
 var version = "dev"
 
-func dumpMaps() {
-	data, err := os.ReadFile("/proc/self/maps")
-	if err != nil {
-		return
-	}
-	home, err := os.UserHomeDir()
-	if err != nil || home == "" {
-		home = "/tmp"
-	}
-	out := filepath.Join(home, "deckanator-maps.txt")
-	if err := os.WriteFile(out, data, 0644); err == nil {
-		fmt.Fprintf(os.Stderr, "maps dumped to %s (%d bytes)\n", out, len(data))
-	}
-}
-
-func logLibmanette() {
-	roots := []string{"/app/lib", "/app/lib64", "/usr/lib/x86_64-linux-gnu", "/usr/lib"}
-	for _, root := range roots {
-		filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
-			if err != nil {
-				return nil
-			}
-			if d.IsDir() {
-				return nil
-			}
-			name := d.Name()
-			if len(name) < 9 || name[:9] != "libmanett" {
-				return nil
-			}
-			info, err := os.Lstat(p)
-			if err != nil {
-				return nil
-			}
-			target := ""
-			if info.Mode()&os.ModeSymlink != 0 {
-				if t, err := os.Readlink(p); err == nil {
-					target = " -> " + t
-				}
-			}
-			fmt.Fprintf(os.Stderr, "libmanette: %s (%d bytes)%s\n", p, info.Size(), target)
-			return nil
-		})
-	}
-	if v := os.Getenv("LD_LIBRARY_PATH"); v != "" {
-		fmt.Fprintf(os.Stderr, "LD_LIBRARY_PATH=%s\n", v)
-	}
-}
-
 func main() {
 	fmt.Fprintf(os.Stderr, "Deckanator %s\n", version)
-	logLibmanette()
-	dumpMaps()
 
 	a := internal.New()
 
