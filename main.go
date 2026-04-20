@@ -18,6 +18,7 @@ var assets embed.FS
 var version = "dev"
 
 func main() {
+	filterStderr()
 	fmt.Fprintf(os.Stderr, "Deckanator %s\n", version)
 
 	a := internal.New()
