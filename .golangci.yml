@@ -1,0 +1,31 @@
+version: "2"
+
+run:
+  tests: false
+  timeout: 15m
+  allow-parallel-runners: true
+
+linters:
+  default: none
+  enable:
+    - forcetypeassert
+    - ineffassign
+    - nolintlint
+    - staticcheck
+    - unconvert
+    - errorlint
+    - nakedret
+    - tagalign
+    - errcheck
+    - prealloc
+    - gocognit
+    - gocritic
+    - goconst
+    - godot
+    - govet
+    - nestif
+    - nilerr
+
+formatters:
+  enable:
+    - goimports

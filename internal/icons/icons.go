@@ -1,14 +1,17 @@
-package internal
+// Package icons holds the curated list of profile icons exposed to the UI.
+package icons
 
 import "math/rand"
 
-type IconDef struct {
+// Icon is a single selectable profile icon.
+type Icon struct {
 	ID    string `json:"id"`
 	Emoji string `json:"emoji"`
 	BG    string `json:"bg"`
 }
 
-var Icons = []IconDef{
+// All is the full icon set exposed to the UI.
+var All = []Icon{
 	{ID: "creeper", Emoji: "💀", BG: "#2d4a2d"},
 	{ID: "diamond", Emoji: "💎", BG: "#1a5c7a"},
 	{ID: "fire", Emoji: "🔥", BG: "#7a2a1a"},
@@ -27,6 +30,7 @@ var Icons = []IconDef{
 	{ID: "chest", Emoji: "📦", BG: "#5c3a1a"},
 }
 
-func RandomIcon() string {
-	return Icons[rand.Intn(len(Icons))].ID
+// Random returns the ID of a randomly picked icon.
+func Random() string {
+	return All[rand.Intn(len(All))].ID
 }

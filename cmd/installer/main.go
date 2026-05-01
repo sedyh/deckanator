@@ -55,9 +55,9 @@ type node struct {
 	order []string
 }
 
-func newMap() *node { return &node{t: vdfMap, sub: make(map[string]*node)} }
-func newStr(s string) *node    { return &node{t: vdfString, str: s} }
-func newInt(v int32) *node     { return &node{t: vdfInt32, num: v} }
+func newMap() *node         { return &node{t: vdfMap, sub: make(map[string]*node)} }
+func newStr(s string) *node { return &node{t: vdfString, str: s} }
+func newInt(v int32) *node  { return &node{t: vdfInt32, num: v} }
 
 func (n *node) set(key string, child *node) {
 	if _, exists := n.sub[key]; !exists {
@@ -89,7 +89,8 @@ func readChildren(r *bytes.Reader, parent *node) {
 			parent.set(key, newStr(readCString(r)))
 		case vdfInt32:
 			var v int32
-			binary.Read(r, binary.LittleEndian, &v)
+			// bytes.Reader: error only if fewer than 4 bytes remain; zero value is safe.
+			_ = binary.Read(r, binary.LittleEndian, &v)
 			parent.set(key, newInt(v))
 		}
 	}
@@ -130,7 +131,8 @@ func writeNode(buf *bytes.Buffer, key string, n *node) {
 	case vdfString:
 		writeCString(buf, n.str)
 	case vdfInt32:
-		binary.Write(buf, binary.LittleEndian, n.num)
+		// bytes.Buffer.Write never returns an error.
+		_ = binary.Write(buf, binary.LittleEndian, n.num)
 	}
 }
 
@@ -216,6 +218,49 @@ func buildShortcut(appID uint32, name, exe, startDir, iconPath, launchOptions st
 	return n
 }
 
+func isOursEntry(e *node) bool {
+	if e == nil {
+		return false
+	}
+	strContainsCI := func(s, sub string) bool {
+		return strings.Contains(strings.ToLower(s), strings.ToLower(sub))
+	}
+	if n := e.sub["AppName"]; n != nil && strContainsCI(n.str, "deckanator") {
+		return true
+	}
+	for _, field := range []string{"Exe", "StartDir", "ShortcutPath"} {
+		if n := e.sub[field]; n != nil {
+			if strContainsCI(strings.Trim(n.str, "\""), "deckanator") {
+				return true
+			}
+		}
+	}
+	if n := e.sub["Exe"]; n != nil && strings.Trim(n.str, "\"") == "/usr/bin/flatpak" {
+		if lo := e.sub["LaunchOptions"]; lo != nil && strings.Contains(lo.str, flatpakAppID) {
+			return true
+		}
+	}
+	return false
+}
+
+func killSteam() {
+	_ = exec.Command("pkill", "-x", "steam").Run()
+	_ = exec.Command("pkill", "-x", "Steam").Run()
+	for i := 0; i < 10; i++ {
+		time.Sleep(500 * time.Millisecond)
+		out, _ := exec.Command("pgrep", "-x", "steam").Output()
+		out2, _ := exec.Command("pgrep", "-x", "Steam").Output()
+		if len(out) == 0 && len(out2) == 0 {
+			break
+		}
+		if i == 9 {
+			_ = exec.Command("pkill", "-9", "-x", "steam").Run()
+			_ = exec.Command("pkill", "-9", "-x", "Steam").Run()
+			time.Sleep(500 * time.Millisecond)
+		}
+	}
+}
+
 func addToShortcuts(steamDir, userID, exeField, launchOptions, startDir, iconPath string, appID uint32) error {
 	scDir := filepath.Join(steamDir, "userdata", userID, "config")
 	scPath := filepath.Join(scDir, "shortcuts.vdf")
@@ -234,50 +279,9 @@ func addToShortcuts(steamDir, userID, exeField, launchOptions, startDir, iconPat
 
 	shortcuts := root.sub["shortcuts"]
 
-	// stop Steam before modifying shortcuts.vdf - otherwise Steam overwrites our changes on exit
-	exec.Command("pkill", "-x", "steam").Run()
-	exec.Command("pkill", "-x", "Steam").Run()
-	// wait until Steam process is actually gone (up to 5s)
-	for i := 0; i < 10; i++ {
-		time.Sleep(500 * time.Millisecond)
-		out, _ := exec.Command("pgrep", "-x", "steam").Output()
-		out2, _ := exec.Command("pgrep", "-x", "Steam").Output()
-		if len(out) == 0 && len(out2) == 0 {
-			break
-		}
-		if i == 9 {
-			exec.Command("pkill", "-9", "-x", "steam").Run()
-			exec.Command("pkill", "-9", "-x", "Steam").Run()
-			time.Sleep(500 * time.Millisecond)
-		}
-	}
+	// Stop Steam before modifying shortcuts.vdf — otherwise Steam overwrites our changes on exit.
+	killSteam()
 
-	// remove all entries that look like ours
-	isOurs := func(e *node) bool {
-		if e == nil {
-			return false
-		}
-		strContainsCI := func(s, sub string) bool {
-			return strings.Contains(strings.ToLower(s), strings.ToLower(sub))
-		}
-		if n := e.sub["AppName"]; n != nil && strContainsCI(n.str, "deckanator") {
-			return true
-		}
-		for _, field := range []string{"Exe", "StartDir", "ShortcutPath"} {
-			if n := e.sub[field]; n != nil {
-				v := strings.Trim(n.str, "\"")
-				if strContainsCI(v, "deckanator") {
-					return true
-				}
-			}
-		}
-		if n := e.sub["Exe"]; n != nil && strings.Trim(n.str, "\"") == "/usr/bin/flatpak" {
-			if lo := e.sub["LaunchOptions"]; lo != nil && strings.Contains(lo.str, flatpakAppID) {
-				return true
-			}
-		}
-		return false
-	}
 	maxIdx := -1
 	newOrder := make([]string, 0, len(shortcuts.order))
 	for _, k := range shortcuts.order {
@@ -285,7 +289,7 @@ func addToShortcuts(steamDir, userID, exeField, launchOptions, startDir, iconPat
 		if idx > maxIdx {
 			maxIdx = idx
 		}
-		if isOurs(shortcuts.sub[k]) {
+		if isOursEntry(shortcuts.sub[k]) {
 			delete(shortcuts.sub, k)
 			continue
 		}
@@ -296,7 +300,7 @@ func addToShortcuts(steamDir, userID, exeField, launchOptions, startDir, iconPat
 	key := strconv.Itoa(maxIdx + 1)
 	shortcuts.set(key, buildShortcut(appID, appName, exeField, startDir, iconPath, launchOptions))
 
-	// sort keys numerically for clean output
+	// Sort keys numerically for clean output.
 	sort.Slice(shortcuts.order, func(i, j int) bool {
 		a, _ := strconv.Atoi(shortcuts.order[i])
 		b, _ := strconv.Atoi(shortcuts.order[j])
@@ -312,8 +316,11 @@ func addToShortcuts(steamDir, userID, exeField, launchOptions, startDir, iconPat
 func removeFromShortcuts(steamDir, userID string) error {
 	scPath := filepath.Join(steamDir, "userdata", userID, "config", "shortcuts.vdf")
 	data, err := os.ReadFile(scPath)
-	if err != nil {
+	if os.IsNotExist(err) {
 		return nil
+	}
+	if err != nil {
+		return err
 	}
 	root := readVDF(data)
 	shortcuts := root.sub["shortcuts"]
@@ -352,7 +359,7 @@ func removeArtwork(steamDir, userID string, appID uint32) {
 	for _, name := range []string{
 		id + ".png", id + "p.png", id + "_hero.png", id + "_logo.png", id + "_icon.png",
 	} {
-		os.Remove(filepath.Join(gridDir, name))
+		_ = os.Remove(filepath.Join(gridDir, name))
 	}
 }
 
@@ -362,13 +369,13 @@ func uninstall(home, steamDir, userID string, appID uint32) {
 	desktopDir := filepath.Join(home, ".local", "share", "applications")
 
 	step(1, "Removing binary...")
-	os.Remove(binPath)
-	os.Remove(iconPath)
-	os.Remove(filepath.Join(home, installDir))
+	_ = os.Remove(binPath)
+	_ = os.Remove(iconPath)
+	_ = os.Remove(filepath.Join(home, installDir))
 
 	step(2, "Removing .desktop entries...")
-	os.Remove(filepath.Join(desktopDir, "deckanator.desktop"))
-	os.Remove(filepath.Join(desktopDir, "deckanator-uninstall.desktop"))
+	_ = os.Remove(filepath.Join(desktopDir, "deckanator.desktop"))
+	_ = os.Remove(filepath.Join(desktopDir, "deckanator-uninstall.desktop"))
 
 	if steamDir != "" && userID != "" {
 		step(3, "Removing Steam shortcut...")
@@ -395,11 +402,11 @@ func copyArtwork(steamDir, userID string, appID uint32, iconPath string) error {
 	id := strconv.FormatUint(uint64(appID), 10)
 
 	files := map[string][]byte{
-		id + ".png":        artGrid,
-		id + "p.png":       artPoster,
-		id + "_hero.png":   artHero,
-		id + "_logo.png":   artIcon,
-		id + "_icon.png":   artIcon,
+		id + ".png":      artGrid,
+		id + "p.png":     artPoster,
+		id + "_hero.png": artHero,
+		id + "_logo.png": artIcon,
+		id + "_icon.png": artIcon,
 	}
 	for name, data := range files {
 		dst := filepath.Join(gridDir, name)
@@ -421,15 +428,15 @@ type ghRelease struct {
 }
 
 func fetchRelease(version string) (*ghRelease, error) {
-	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
+	rawURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
 	if version != "" {
-		url = fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", repo, version)
+		rawURL = fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", repo, version)
 	}
-	resp, err := http.Get(url)
+	resp, err := http.Get(rawURL)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	var rel ghRelease
 	if err := json.NewDecoder(resp.Body).Decode(&rel); err != nil {
 		return nil, err
@@ -437,19 +444,19 @@ func fetchRelease(version string) (*ghRelease, error) {
 	return &rel, nil
 }
 
-func downloadFile(url, dst string) error {
-	resp, err := http.Get(url)
+func downloadFile(rawURL, dst string) error {
+	resp, err := http.Get(rawURL)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
 		return err
 	}
 
-	// kill running process before replacing binary ("text file busy")
-	exec.Command("pkill", "-f", dst).Run()
+	// Kill running process before replacing binary ("text file busy").
+	_ = exec.Command("pkill", "-f", dst).Run()
 
 	tmp := dst + ".tmp"
 	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
@@ -457,12 +464,14 @@ func downloadFile(url, dst string) error {
 		return err
 	}
 	if _, err = io.Copy(f, resp.Body); err != nil {
-		f.Close()
-		os.Remove(tmp)
+		_ = f.Close()
+		_ = os.Remove(tmp)
 		return err
 	}
-	f.Close()
-
+	if err := f.Close(); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
 	return os.Rename(tmp, dst)
 }
 
@@ -488,140 +497,43 @@ func fail(msg string, err error) {
 
 const flatpakAppID = "io.github.sedyh.Deckanator"
 
-func main() {
-	version      := flag.String("version", "", "version to install (e.g. v0.2.0), default: latest")
-	skipDownload := flag.Bool("skip-download", false, "skip downloading binary (use existing)")
-	doUninstall  := flag.Bool("uninstall", false, "remove Deckanator and Steam shortcut")
-	useFlatpak   := flag.Bool("flatpak", false, "configure Steam for Flatpak installation")
-	flag.Parse()
-
-	home, err := os.UserHomeDir()
+func downloadBinary(version, binPath string) {
+	step(1, "Fetching release info...")
+	rel, err := fetchRelease(version)
 	if err != nil {
-		fail("home dir", err)
+		fail("fetch release", err)
 	}
+	fmt.Printf("    version: %s\n", rel.TagName)
 
-	binPath  := filepath.Join(home, installDir, exeName)
-	iconPath := filepath.Join(home, installDir, "icon.png")
-
-	// exe and launch options for Steam shortcut
-	var exeField, launchOptions string
-	if *useFlatpak {
-		exeField = "/usr/bin/flatpak"
-		launchOptions = "run " + flatpakAppID
-	} else {
-		exeField = "\"" + binPath + "\""
-		launchOptions = ""
-	}
-	// appID must be stable across install methods - always derive from flatpak ID
-	appID := computeAppID("/usr/bin/flatpak", appName)
-
-	steamDir := findSteamDir(home)
-	userID := ""
-	if steamDir != "" {
-		userID = findSteamUser(steamDir)
-	}
-
-	if *doUninstall {
-		fmt.Printf("Deckanator uninstaller\n\n")
-		uninstall(home, steamDir, userID, appID)
-		return
-	}
-
-	fmt.Printf("Deckanator installer\n")
-	fmt.Printf("App ID: %d\n\n", appID)
-
-	if !*useFlatpak {
-		// 0. System dependencies (only needed for direct binary)
-		step(0, "Checking dependencies...")
-		if err := ensureWebkit(); err != nil {
-			fmt.Fprintf(os.Stderr, "    warning: %v\n", err)
-			fmt.Fprintln(os.Stderr, "    try manually: sudo steamos-readonly disable && sudo pacman -S --noconfirm webkit2gtk")
+	var assetURL string
+	for _, a := range rel.Assets {
+		if strings.Contains(a.Name, "linux") && strings.Contains(a.Name, "amd64") && !strings.Contains(a.Name, "installer") {
+			assetURL = a.BrowserDownloadURL
+			break
 		}
 	}
-
-	// 1. Download binary
-	if !*useFlatpak && !*skipDownload {
-		step(1, "Fetching release info...")
-		rel, err := fetchRelease(*version)
-		if err != nil {
-			fail("fetch release", err)
-		}
-		fmt.Printf("    version: %s\n", rel.TagName)
-
-		assetURL := ""
-		for _, a := range rel.Assets {
-			if strings.Contains(a.Name, "linux") && strings.Contains(a.Name, "amd64") && !strings.Contains(a.Name, "installer") {
-				assetURL = a.BrowserDownloadURL
-				break
-			}
-		}
-		if assetURL == "" {
-			fmt.Fprintln(os.Stderr, "error: linux/amd64 asset not found in release")
-			os.Exit(1)
-		}
-
-		step(1, fmt.Sprintf("Downloading %s...", rel.TagName))
-		if err := downloadFile(assetURL, binPath); err != nil {
-			fail("download binary", err)
-		}
-		fmt.Printf("    installed to %s\n", binPath)
-	} else if !*useFlatpak {
-		step(1, fmt.Sprintf("Skipping download, using %s", binPath))
-	} else {
-		step(1, "Using Flatpak installation")
+	if assetURL == "" {
+		fmt.Fprintln(os.Stderr, "error: linux/amd64 asset not found in release")
+		os.Exit(1)
 	}
 
-	// 2. Icon (always install for Steam artwork)
-	step(2, "Installing icon...")
-	if err := os.MkdirAll(filepath.Dir(iconPath), 0755); err != nil {
-		fail("create install dir", err)
+	step(1, fmt.Sprintf("Downloading %s...", rel.TagName))
+	if err := downloadFile(assetURL, binPath); err != nil {
+		fail("download binary", err)
 	}
-	if err := os.WriteFile(iconPath, artIcon, 0644); err != nil {
-		fail("write icon", err)
-	}
+	fmt.Printf("    installed to %s\n", binPath)
+}
 
-	// 3. .desktop entries
-	step(3, "Creating .desktop entries...")
-	installerPath, _ := os.Executable()
-	desktopDir := filepath.Join(home, ".local", "share", "applications")
-	if err := os.MkdirAll(desktopDir, 0755); err != nil {
-		fail("create desktop dir", err)
-	}
-	writeDesktop := func(name, filename, exec, comment string) {
-		content := strings.Join([]string{
-			"[Desktop Entry]",
-			"Name=" + name,
-			"Comment=" + comment,
-			"Exec=" + exec,
-			"Icon=" + iconPath,
-			"Type=Application",
-			"Categories=Game;",
-			"StartupNotify=false",
-		}, "\n") + "\n"
-		if err := os.WriteFile(filepath.Join(desktopDir, filename), []byte(content), 0644); err != nil {
-			fmt.Fprintf(os.Stderr, "    warning: %v\n", err)
-		}
-	}
-	launchExec := binPath
-	if *useFlatpak {
-		launchExec = "flatpak run " + flatpakAppID
-	}
-	writeDesktop("Deckanator", "deckanator.desktop", launchExec, "Minecraft launcher for Steam Deck")
-	writeDesktop("Uninstall Deckanator", "deckanator-uninstall.desktop",
-		installerPath+" --uninstall", "Remove Deckanator and Steam shortcut")
-
-	// 4. Steam integration
+func setupSteam(steamDir, userID, exeField, launchOptions, binPath, iconPath string, appID uint32) {
 	step(4, "Looking for Steam...")
 	if steamDir == "" {
 		fmt.Println("    Steam not found - skipping Steam integration")
-		printDone("")
 		return
 	}
 	fmt.Printf("    found: %s\n", steamDir)
 
 	if userID == "" {
 		fmt.Println("    no Steam users found - skipping Steam integration")
-		printDone("")
 		return
 	}
 	fmt.Printf("    user: %s\n", userID)
@@ -640,8 +552,105 @@ func main() {
 		fmt.Println("    done")
 	}
 
-	// Restart Steam so it picks up the new shortcuts
-	exec.Command("bash", "-c", "nohup steam &>/dev/null &").Start()
+	_ = exec.Command("bash", "-c", "nohup steam &>/dev/null &").Start()
+}
+
+func main() {
+	version := flag.String("version", "", "version to install (e.g. v0.2.0), default: latest")
+	skipDownload := flag.Bool("skip-download", false, "skip downloading binary (use existing)")
+	doUninstall := flag.Bool("uninstall", false, "remove Deckanator and Steam shortcut")
+	useFlatpak := flag.Bool("flatpak", false, "configure Steam for Flatpak installation")
+	flag.Parse()
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		fail("home dir", err)
+	}
+
+	binPath := filepath.Join(home, installDir, exeName)
+	iconPath := filepath.Join(home, installDir, "icon.png")
+
+	var exeField, launchOptions string
+	if *useFlatpak {
+		exeField = "/usr/bin/flatpak"
+		launchOptions = "run " + flatpakAppID
+	} else {
+		exeField = "\"" + binPath + "\""
+		launchOptions = ""
+	}
+	// appID must be stable across install methods — always derive from flatpak ID.
+	appID := computeAppID("/usr/bin/flatpak", appName)
+
+	steamDir := findSteamDir(home)
+	userID := ""
+	if steamDir != "" {
+		userID = findSteamUser(steamDir)
+	}
+
+	if *doUninstall {
+		fmt.Printf("Deckanator uninstaller\n\n")
+		uninstall(home, steamDir, userID, appID)
+		return
+	}
+
+	fmt.Printf("Deckanator installer\n")
+	fmt.Printf("App ID: %d\n\n", appID)
+
+	if !*useFlatpak {
+		step(0, "Checking dependencies...")
+		if err := ensureWebkit(); err != nil {
+			fmt.Fprintf(os.Stderr, "    warning: %v\n", err)
+			fmt.Fprintln(os.Stderr, "    try manually: sudo steamos-readonly disable && sudo pacman -S --noconfirm webkit2gtk")
+		}
+	}
+
+	switch {
+	case !*useFlatpak && !*skipDownload:
+		downloadBinary(*version, binPath)
+	case !*useFlatpak:
+		step(1, fmt.Sprintf("Skipping download, using %s", binPath))
+	default:
+		step(1, "Using Flatpak installation")
+	}
+
+	step(2, "Installing icon...")
+	if err := os.MkdirAll(filepath.Dir(iconPath), 0755); err != nil {
+		fail("create install dir", err)
+	}
+	if err := os.WriteFile(iconPath, artIcon, 0644); err != nil {
+		fail("write icon", err)
+	}
+
+	step(3, "Creating .desktop entries...")
+	installerPath, _ := os.Executable()
+	desktopDir := filepath.Join(home, ".local", "share", "applications")
+	if err := os.MkdirAll(desktopDir, 0755); err != nil {
+		fail("create desktop dir", err)
+	}
+	writeDesktop := func(name, filename, execCmd, comment string) {
+		content := strings.Join([]string{
+			"[Desktop Entry]",
+			"Name=" + name,
+			"Comment=" + comment,
+			"Exec=" + execCmd,
+			"Icon=" + iconPath,
+			"Type=Application",
+			"Categories=Game;",
+			"StartupNotify=false",
+		}, "\n") + "\n"
+		if err := os.WriteFile(filepath.Join(desktopDir, filename), []byte(content), 0644); err != nil {
+			fmt.Fprintf(os.Stderr, "    warning: %v\n", err)
+		}
+	}
+	launchExec := binPath
+	if *useFlatpak {
+		launchExec = "flatpak run " + flatpakAppID
+	}
+	writeDesktop("Deckanator", "deckanator.desktop", launchExec, "Minecraft launcher for Steam Deck")
+	writeDesktop("Uninstall Deckanator", "deckanator-uninstall.desktop",
+		installerPath+" --uninstall", "Remove Deckanator and Steam shortcut")
+
+	setupSteam(steamDir, userID, exeField, launchOptions, binPath, iconPath, appID)
 
 	if *useFlatpak {
 		printDone("Run: flatpak run " + flatpakAppID)

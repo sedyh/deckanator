@@ -1,4 +1,4 @@
-package internal
+package minecraft
 
 import (
 	"context"
@@ -6,32 +6,47 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sync"
+
+	"deckanator/internal/config"
+	"deckanator/internal/download"
+	"deckanator/internal/maven"
 )
 
+const (
+	loaderFabric = "fabric"
+	ruleAllow    = "allow"
+)
+
+// IsInstalled reports whether the given (loader, mcVersion[, fabricVersion])
+// combination is already present on disk.
 func IsInstalled(loader, mcVersion, fabricVersion string) bool {
-	dir := GameDir()
-	vanillaJSON := filepath.Join(dir, "versions", mcVersion, mcVersion+".json")
-	vanillaJAR := filepath.Join(dir, "versions", mcVersion, mcVersion+".jar")
-	if _, err := os.Stat(vanillaJSON); err != nil {
+	dir := config.GameDir()
+	if _, err := os.Stat(filepath.Join(dir, "versions", mcVersion, mcVersion+".json")); err != nil {
 		return false
 	}
-	if _, err := os.Stat(vanillaJAR); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, "versions", mcVersion, mcVersion+".jar")); err != nil {
 		return false
 	}
-	if loader == "fabric" && fabricVersion != "" {
+	if loader == loaderFabric && fabricVersion != "" {
 		id := fabricProfileID(mcVersion, fabricVersion)
-		fabricJSON := filepath.Join(dir, "versions", id, id+".json")
-		if _, err := os.Stat(fabricJSON); err != nil {
+		if _, err := os.Stat(filepath.Join(dir, "versions", id, id+".json")); err != nil {
 			return false
 		}
 	}
 	return true
 }
 
-func Install(ctx context.Context, loader, mcVersion, fabricVersion, javaComponent string, progress ProgressFunc) error {
-	dir := GameDir()
+// Install downloads Minecraft (plus, optionally, Fabric) for the given
+// target. It ensures the required Java runtime is cached.
+func Install(
+	ctx context.Context,
+	loader, mcVersion, fabricVersion, javaComponent string,
+	ensureJava func(component string, progress ProgressFunc) (string, error),
+	javaCached func(component string) string,
+	progress ProgressFunc,
+) error {
+	dir := config.GameDir()
 
 	progress("Fetching versions", 2, 100)
 	manifest, err := fetchManifest()
@@ -57,22 +72,22 @@ func Install(ctx context.Context, loader, mcVersion, fabricVersion, javaComponen
 	}
 
 	versionDir := filepath.Join(dir, "versions", mcVersion)
-	if err := os.MkdirAll(versionDir, 0755); err != nil {
+	if err := os.MkdirAll(versionDir, 0o755); err != nil {
 		return err
 	}
-	jsonData, _ := json.MarshalIndent(details, "", "  ")
-	if err := os.WriteFile(filepath.Join(versionDir, mcVersion+".json"), jsonData, 0644); err != nil {
-		return err
+	if data, err := json.MarshalIndent(details, "", "  "); err == nil {
+		if err := os.WriteFile(filepath.Join(versionDir, mcVersion+".json"), data, 0o644); err != nil {
+			return err
+		}
 	}
 
 	progress("Downloading client", 8, 100)
-	clientURL := details.Downloads["client"].URL
 	clientPath := filepath.Join(versionDir, mcVersion+".jar")
-	if err := downloadFile(clientURL, clientPath); err != nil {
+	if err := download.File(details.Downloads["client"].URL, clientPath); err != nil {
 		return fmt.Errorf("client jar: %w", err)
 	}
 
-	libs := filterLibraries(details.Libraries)
+	libs := FilterLibraries(details.Libraries)
 	libDir := filepath.Join(dir, "libraries")
 	if err := downloadLibraries(libs, libDir, 10, 30, progress); err != nil {
 		return err
@@ -80,7 +95,7 @@ func Install(ctx context.Context, loader, mcVersion, fabricVersion, javaComponen
 
 	progress("Extracting natives", 32, 100)
 	nativesDir := filepath.Join(versionDir, "natives")
-	if err := os.MkdirAll(nativesDir, 0755); err != nil {
+	if err := os.MkdirAll(nativesDir, 0o755); err != nil {
 		return err
 	}
 	if err := extractAllNatives(libs, libDir, nativesDir); err != nil {
@@ -89,11 +104,11 @@ func Install(ctx context.Context, loader, mcVersion, fabricVersion, javaComponen
 
 	progress("Fetching asset index", 35, 100)
 	indexDir := filepath.Join(dir, "assets", "indexes")
-	if err := os.MkdirAll(indexDir, 0755); err != nil {
+	if err := os.MkdirAll(indexDir, 0o755); err != nil {
 		return err
 	}
 	indexPath := filepath.Join(indexDir, details.AssetIndex.ID+".json")
-	if err := downloadFile(details.AssetIndex.URL, indexPath); err != nil {
+	if err := download.File(details.AssetIndex.URL, indexPath); err != nil {
 		return fmt.Errorf("asset index: %w", err)
 	}
 
@@ -101,33 +116,32 @@ func Install(ctx context.Context, loader, mcVersion, fabricVersion, javaComponen
 	if err != nil {
 		return err
 	}
-	var assetIndex AssetIndex
-	if err := json.Unmarshal(indexData, &assetIndex); err != nil {
+	var index AssetIndex
+	if err := json.Unmarshal(indexData, &index); err != nil {
 		return err
 	}
 
-	if err := downloadAssets(assetIndex, filepath.Join(dir, "assets", "objects"), 37, 90, progress); err != nil {
+	if err := downloadAssets(index, filepath.Join(dir, "assets", "objects"), 37, 90, progress); err != nil {
 		return fmt.Errorf("assets: %w", err)
 	}
 
-	if loader == "fabric" && fabricVersion != "" {
+	if loader == loaderFabric && fabricVersion != "" {
 		progress("Installing Fabric", 90, 100)
 		if err := installFabric(ctx, dir, mcVersion, fabricVersion, libDir, progress); err != nil {
 			return fmt.Errorf("fabric: %w", err)
 		}
 	}
 
-	component := ""
+	component := javaComponent
 	if details.JavaVersion != nil && details.JavaVersion.Component != "" {
 		component = details.JavaVersion.Component
-	} else if javaComponent != "" {
-		component = javaComponent
-	} else {
+	}
+	if component == "" {
 		component = "java-runtime-gamma"
 	}
-	if cachedJavaPath(component) == "" {
+	if javaCached(component) == "" {
 		progress("Downloading Java", 93, 100)
-		if _, err := downloadMojangJava(component, func(stage string, cur, tot int) {
+		if _, err := ensureJava(component, func(stage string, cur, tot int) {
 			progress(stage, 93+cur*6/100, 100)
 		}); err != nil {
 			return fmt.Errorf("java: %w", err)
@@ -138,25 +152,23 @@ func Install(ctx context.Context, loader, mcVersion, fabricVersion, javaComponen
 	return nil
 }
 
-type libArtifact struct {
-	path string
-	url  string
-}
+type libArtifact struct{ path, url string }
 
 func collectArtifacts(libs []Library) []libArtifact {
-	var out []libArtifact
+	out := make([]libArtifact, 0, len(libs))
 	for _, lib := range libs {
-		if lib.Downloads != nil && lib.Downloads.Artifact != nil {
+		switch {
+		case lib.Downloads != nil && lib.Downloads.Artifact != nil:
 			out = append(out, libArtifact{
 				path: lib.Downloads.Artifact.Path,
 				url:  lib.Downloads.Artifact.URL,
 			})
-		} else if lib.Name != "" && lib.URL != "" {
-			rel := mavenLocalPath(lib.Name)
+		case lib.Name != "" && lib.URL != "":
+			rel := maven.LocalPath(lib.Name)
 			if rel != "" {
 				out = append(out, libArtifact{
 					path: rel,
-					url:  mavenDownloadURL(lib.URL, lib.Name),
+					url:  maven.DownloadURL(lib.URL, lib.Name),
 				})
 			}
 		}
@@ -177,15 +189,14 @@ func downloadLibraries(libs []Library, libDir string, from, to int, progress Pro
 	var dlErr error
 	done := 0
 
-	for _, art := range artifacts {
+	for _, a := range artifacts {
 		wg.Add(1)
 		go func(a libArtifact) {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
-			path := filepath.Join(libDir, a.path)
-			if err := downloadFile(a.url, path); err != nil {
+			if err := download.File(a.url, filepath.Join(libDir, a.path)); err != nil {
 				mu.Lock()
 				dlErr = err
 				mu.Unlock()
@@ -193,22 +204,20 @@ func downloadLibraries(libs []Library, libDir string, from, to int, progress Pro
 			}
 			mu.Lock()
 			done++
-			pct := from + done*(to-from)/total
-			progress("Downloading libraries", pct, 100)
+			progress("Downloading libraries", from+done*(to-from)/total, 100)
 			mu.Unlock()
-		}(art)
+		}(a)
 	}
 	wg.Wait()
 	return dlErr
 }
 
 func downloadAssets(index AssetIndex, objectsDir string, from, to int, progress ProgressFunc) error {
-	type asset struct{ hash string }
-	var assets []asset
+	hashes := make([]string, 0, len(index.Objects))
 	for _, obj := range index.Objects {
-		assets = append(assets, asset{obj.Hash})
+		hashes = append(hashes, obj.Hash)
 	}
-	total := len(assets)
+	total := len(hashes)
 	if total == 0 {
 		return nil
 	}
@@ -219,7 +228,7 @@ func downloadAssets(index AssetIndex, objectsDir string, from, to int, progress 
 	var dlErr error
 	done := 0
 
-	for _, a := range assets {
+	for _, hash := range hashes {
 		wg.Add(1)
 		go func(hash string) {
 			defer wg.Done()
@@ -227,9 +236,8 @@ func downloadAssets(index AssetIndex, objectsDir string, from, to int, progress 
 			defer func() { <-sem }()
 
 			sub := hash[:2]
-			path := filepath.Join(objectsDir, sub, hash)
 			url := fmt.Sprintf("https://resources.download.minecraft.net/%s/%s", sub, hash)
-			if err := downloadFile(url, path); err != nil {
+			if err := download.File(url, filepath.Join(objectsDir, sub, hash)); err != nil {
 				mu.Lock()
 				dlErr = err
 				mu.Unlock()
@@ -238,18 +246,17 @@ func downloadAssets(index AssetIndex, objectsDir string, from, to int, progress 
 			mu.Lock()
 			done++
 			if done%200 == 0 || done == total {
-				pct := from + done*(to-from)/total
-				progress("Downloading assets", pct, 100)
+				progress("Downloading assets", from+done*(to-from)/total, 100)
 			}
 			mu.Unlock()
-		}(a.hash)
+		}(hash)
 	}
 	wg.Wait()
 	return dlErr
 }
 
 func extractAllNatives(libs []Library, libDir, nativesDir string) error {
-	key := "natives-" + osName()
+	key := "natives-" + config.OSName()
 	for _, lib := range libs {
 		if lib.Downloads == nil || lib.Downloads.Classifiers == nil {
 			continue
@@ -259,10 +266,10 @@ func extractAllNatives(libs []Library, libDir, nativesDir string) error {
 			continue
 		}
 		path := filepath.Join(libDir, native.Path)
-		if err := downloadFile(native.URL, path); err != nil {
+		if err := download.File(native.URL, path); err != nil {
 			return err
 		}
-		if err := extractNatives(path, nativesDir); err != nil {
+		if err := download.ExtractNatives(path, nativesDir); err != nil {
 			return err
 		}
 	}
@@ -278,60 +285,45 @@ func installFabric(_ context.Context, dir, mcVersion, loaderVersion, libDir stri
 
 	id := fabricProfileID(mcVersion, loaderVersion)
 	versionDir := filepath.Join(dir, "versions", id)
-	if err := os.MkdirAll(versionDir, 0755); err != nil {
+	if err := os.MkdirAll(versionDir, 0o755); err != nil {
 		return err
 	}
-	jsonData, _ := json.MarshalIndent(prof, "", "  ")
-	if err := os.WriteFile(filepath.Join(versionDir, id+".json"), jsonData, 0644); err != nil {
-		return err
+	if data, err := json.MarshalIndent(prof, "", "  "); err == nil {
+		if err := os.WriteFile(filepath.Join(versionDir, id+".json"), data, 0o644); err != nil {
+			return err
+		}
 	}
 
 	progress("Downloading Fabric libraries", 95, 100)
 	return downloadLibraries(prof.Libraries, libDir, 95, 99, progress)
 }
 
-func filterLibraries(libs []Library) []Library {
-	var result []Library
+// FilterLibraries returns the subset of libs whose rules allow them on
+// the current OS.
+func FilterLibraries(libs []Library) []Library {
+	out := make([]Library, 0, len(libs))
 	for _, lib := range libs {
-		if shouldIncludeLibrary(lib) {
-			result = append(result, lib)
+		if shouldInclude(lib) {
+			out = append(out, lib)
 		}
 	}
-	return result
+	return out
 }
 
-func shouldIncludeLibrary(lib Library) bool {
+func shouldInclude(lib Library) bool {
 	if len(lib.Rules) == 0 {
 		return true
 	}
 	allowed := false
 	for _, rule := range lib.Rules {
-		if rule.OS == nil {
-			if rule.Action == "allow" {
-				allowed = true
-			} else {
-				allowed = false
-			}
-		} else if rule.OS.Name == osName() {
-			if rule.Action == "allow" {
-				allowed = true
-			} else {
-				allowed = false
-			}
+		switch {
+		case rule.OS == nil:
+			allowed = rule.Action == ruleAllow
+		case rule.OS.Name == config.OSName():
+			allowed = rule.Action == ruleAllow
 		}
 	}
 	return allowed
-}
-
-func osName() string {
-	switch runtime.GOOS {
-	case "darwin":
-		return "osx"
-	case "windows":
-		return "windows"
-	default:
-		return "linux"
-	}
 }
 
 func fabricProfileID(mcVersion, loaderVersion string) string {

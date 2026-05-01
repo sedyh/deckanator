@@ -26,6 +26,11 @@ tasks:
       - task: build:linux
       - task: build:windows
 
+  lint:
+    desc: Run golangci-lint
+    cmds:
+      - go tool golangci-lint run
+
   clean:
     desc: Remove build artifacts
     cmds:
