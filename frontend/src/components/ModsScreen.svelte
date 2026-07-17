@@ -251,8 +251,10 @@
   }
 
   function handleKey(e) {
-    if (!consumeKey(e)) return
+    // An open dropdown owns the keys: don't consume them here or the
+    // dropdown's own consumeKey would reject them as duplicates.
     if (document.querySelector('.wrap.open')) return
+    if (!consumeKey(e)) return
 
     if (e.key === 'Escape') {
       e.preventDefault(); e.stopPropagation()

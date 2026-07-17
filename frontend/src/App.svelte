@@ -282,9 +282,12 @@
   }
 
   function handleGlobalKey(e) {
-    if (!consumeKey(e)) return
+    // Ownership checks come first: consumeKey must only run when this
+    // handler will actually route the event, otherwise it poisons the
+    // debounce map for the handler that owns it.
     if (modsOpen) return
     if (document.querySelector('.wrap.open')) return
+    if (!consumeKey(e)) return
 
     if (e.code === 'KeyM' || e.key === 'm' || e.key === 'M' || e.key === 'ь' || e.key === 'Ь') {
       if (profile && !modsOpen && carouselMode !== 'edit') {

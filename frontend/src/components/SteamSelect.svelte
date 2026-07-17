@@ -84,9 +84,12 @@
   }
 
   function handleKeydown(e) {
-    if (!consumeKey(e)) return
+    // consumeKey only for events this component actually handles; a closed
+    // select must let arrows bubble to the global panel navigation without
+    // marking them consumed, or the global handler would reject them.
     if (!open) {
       if (e.key === 'Enter' || e.key === ' ') {
+        if (!consumeKey(e)) return
         e.preventDefault()
         e.stopPropagation()
         openDropdown()
@@ -94,6 +97,7 @@
       // ArrowDown/Up bubble to global panel navigation handler
       return
     }
+    if (!consumeKey(e)) { e.stopPropagation(); return }
     if (e.key === 'Escape')    { e.stopPropagation(); closeDropdown() }
     if (e.key === 'ArrowDown') {
       e.preventDefault(); e.stopPropagation()
