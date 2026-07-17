@@ -186,12 +186,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.local/share/flatpak
-          key: flatpak-gnome-49
+          key: flatpak-gnome-50
 
       - name: Install Flatpak runtime
         run: |
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          flatpak install --user -y org.gnome.Platform//49 org.gnome.Sdk//49
+          flatpak install --user -y org.gnome.Platform//50 org.gnome.Sdk//50
 
       - name: Prepare sources
         run: |
