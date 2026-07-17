@@ -10,16 +10,22 @@
 //      gamepadconnected and delay the first poll.
 //   4. Diagonal stick input used to trigger both axes; now a perpendicular
 //      axis can suppress its neighbour via requirePairUnder.
+//   5. Steam Input creates a virtual "masked" XInput copy of the physical
+//      Valve gamepad. Both appear in getGamepads() with nearly identical
+//      timestamps. We filter the masked copy to avoid double-firing.
 //
 // Design:
 //   - Actions named with multiple triggers (keys, buttons, axes).
 //   - Native events tracked in bubble phase; never preventDefault'd.
 //   - consumeKey() debounces keydown per logical key (TTL + min-gap) so
 //     autorepeat and native<->synthetic races can't double-fire.
+//   - Gamepad poll uses requestAnimationFrame (vsync-aligned, pauses when
+//     hidden, doesn't compete with rendering or cursor event delivery).
 //   - Gamepad poll starts only after the first gamepadconnected event and
 //     a 500ms warm-up to avoid libmanette init-time asserts.
+//   - Input processing stops when the window loses focus so Steam Deck
+//     overlays (QAM, keyboard) don't receive doubled events.
 
-const POLL_MS = 16
 const DEFAULT_DEADZONE = 0.5
 const AXIS_RELEASE_DEADZONE = 0.3
 const NATIVE_SAFETY_MS = 1500
@@ -27,6 +33,9 @@ const SYNTHETIC_HOLD_MS = 200
 const STALE_KEY_MS = 500
 const MIN_ACCEPT_GAP_MS = 100
 const GAMEPAD_WARMUP_MS = 500
+// Two gamepads whose timestamps differ by less than this are treated as
+// the same physical device (Steam Input masked copy).
+const MASKED_GAMEPAD_TIMESTAMP_DELTA = 10
 
 const actionDefs = new Map()
 const actionState = new Map()
@@ -41,8 +50,9 @@ const lastAccepted = new Map()
 const pendingRelease = new Map()
 const KEYUP_RELEASE_DELAY_MS = 150
 
-let pollTimer = null
+let rafHandle = null
 let started = false
+let windowFocused = true
 let gamepadReady = false
 let gamepadReadyAt = 0
 
@@ -163,30 +173,50 @@ function safeGetGamepads() {
   catch (err) { console.error('[input] getGamepads', err); return null }
 }
 
+// Returns true if gamepad is a Valve device (physical Steam Deck controller
+// or Steam Controller). Valve's USB vendor ID is 0x28de.
+function isValveGamepad(gp) {
+  return gp != null && gp.id.includes('Vendor: 28de')
+}
+
+// Returns true if gamepad is a virtual XInput copy created by Steam Input.
+// Steam Input mirrors the physical Valve gamepad as a standard controller;
+// both share nearly identical timestamps. We skip the masked copy so each
+// physical button press only fires once.
+function isMaskedGamepad(pads, gp) {
+  for (let i = 0; i < pads.length; i++) {
+    const valve = pads[i]
+    if (!valve || !isValveGamepad(valve)) continue
+    if (Math.abs(valve.timestamp - gp.timestamp) <= MASKED_GAMEPAD_TIMESTAMP_DELTA) {
+      return true
+    }
+  }
+  return false
+}
+
 function evalGamepad(def, wasPressed) {
   let pressed = false
   let strength = 0
   const pads = safeGetGamepads()
   if (!pads) return { pressed: false, strength: 0 }
 
-  for (const t of def.triggers) {
-    if (t.type === 'button') {
-      for (let i = 0; i < pads.length; i++) {
-        const gp = pads[i]
-        if (!gp) continue
+  for (let i = 0; i < pads.length; i++) {
+    const gp = pads[i]
+    if (!gp) continue
+    if (!isValveGamepad(gp) && isMaskedGamepad(pads, gp)) continue
+
+    for (const t of def.triggers) {
+      if (t.type === 'button') {
         const b = gp.buttons && gp.buttons[t.index]
         if (b && b.pressed) {
           pressed = true
           if (b.value > strength) strength = b.value
         }
-      }
-    } else if (t.type === 'axis') {
-      const enterDz = t.deadzone ?? DEFAULT_DEADZONE
-      const exitDz = t.releaseDeadzone ?? AXIS_RELEASE_DEADZONE
-      const dz = wasPressed ? exitDz : enterDz
-      for (let i = 0; i < pads.length; i++) {
-        const gp = pads[i]
-        if (!gp || !gp.axes) continue
+      } else if (t.type === 'axis') {
+        if (!gp.axes) continue
+        const enterDz = t.deadzone ?? DEFAULT_DEADZONE
+        const exitDz = t.releaseDeadzone ?? AXIS_RELEASE_DEADZONE
+        const dz = wasPressed ? exitDz : enterDz
         const raw = (gp.axes[t.index] ?? 0) * (t.sign ?? 1)
         if (raw <= dz) continue
         // requirePairUnder: suppress this axis when the paired perpendicular
@@ -255,35 +285,38 @@ function pruneStale() {
 function update() {
   try {
     pruneStale()
-    for (const [name, def] of actionDefs) {
-      const s = actionState.get(name)
-      const keyPressed = evalKeys(def)
-      const { pressed: gpPressed, strength: gpStrength } = evalGamepad(def, s.sourceGamepad)
-      const pressed = keyPressed || gpPressed
-      const strength = keyPressed ? 1 : gpStrength
-      const prev = s.pressed
+    if (windowFocused) {
+      for (const [name, def] of actionDefs) {
+        const s = actionState.get(name)
+        const keyPressed = evalKeys(def)
+        const { pressed: gpPressed, strength: gpStrength } = evalGamepad(def, s.sourceGamepad)
+        const pressed = keyPressed || gpPressed
+        const strength = keyPressed ? 1 : gpStrength
+        const prev = s.pressed
 
-      s.pressed = pressed
-      s.strength = strength
-      s.sourceKey = keyPressed
-      s.sourceGamepad = gpPressed
-      s.justPressed = pressed && !prev
-      s.justReleased = !pressed && prev
+        s.pressed = pressed
+        s.strength = strength
+        s.sourceKey = keyPressed
+        s.sourceGamepad = gpPressed
+        s.justPressed = pressed && !prev
+        s.justReleased = !pressed && prev
 
-      if (s.justPressed) {
-        fire('pressed', name)
-        if (!keyPressed && gpPressed && def.emitKey) {
-          dispatchSynthetic(def.emitKey)
+        if (s.justPressed) {
+          fire('pressed', name)
+          if (!keyPressed && gpPressed && def.emitKey) {
+            dispatchSynthetic(def.emitKey)
+          }
         }
-      }
-      if (s.justReleased) {
-        fire('released', name)
-        if (def.emitKey?.key) releaseConsumed(def.emitKey.key)
+        if (s.justReleased) {
+          fire('released', name)
+          if (def.emitKey?.key) releaseConsumed(def.emitKey.key)
+        }
       }
     }
   } catch (err) {
     console.error('[input] update', err)
   }
+  rafHandle = requestAnimationFrame(update)
 }
 
 function isEditable(el) {
@@ -326,7 +359,12 @@ function onKeyUp(e) {
   }
 }
 
-function onBlur() {
+function onWindowFocus() {
+  windowFocused = true
+}
+
+function onWindowBlur() {
+  windowFocused = false
   keyCodesDown.clear()
   keyKeysDown.clear()
   lastKeyActivity.clear()
@@ -357,10 +395,11 @@ export function init() {
   started = true
   window.addEventListener('keydown', onKeyDown, true)
   window.addEventListener('keyup', onKeyUp, true)
-  window.addEventListener('blur', onBlur)
+  window.addEventListener('focus', onWindowFocus)
+  window.addEventListener('blur', onWindowBlur)
   window.addEventListener('gamepadconnected', onGamepadConnected)
   window.addEventListener('gamepaddisconnected', onGamepadDisconnected)
-  pollTimer = setInterval(update, POLL_MS)
+  rafHandle = requestAnimationFrame(update)
 }
 
 export function destroy() {
@@ -368,10 +407,11 @@ export function destroy() {
   started = false
   window.removeEventListener('keydown', onKeyDown, true)
   window.removeEventListener('keyup', onKeyUp, true)
-  window.removeEventListener('blur', onBlur)
+  window.removeEventListener('focus', onWindowFocus)
+  window.removeEventListener('blur', onWindowBlur)
   window.removeEventListener('gamepadconnected', onGamepadConnected)
   window.removeEventListener('gamepaddisconnected', onGamepadDisconnected)
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+  if (rafHandle != null) { cancelAnimationFrame(rafHandle); rafHandle = null }
   for (const [, t] of consumed) clearTimeout(t)
   consumed.clear()
   for (const [, t] of pendingRelease) clearTimeout(t)
@@ -385,4 +425,5 @@ export function destroy() {
   keyKeysDown.clear()
   lastKeyActivity.clear()
   gamepadReady = false
+  windowFocused = true
 }

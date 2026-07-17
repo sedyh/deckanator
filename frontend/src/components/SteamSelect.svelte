@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher, onDestroy, tick } from 'svelte'
+  import { consumeKey } from '../lib/input.js'
 
   export let value = ''
   export let options = []
@@ -83,7 +84,7 @@
   }
 
   function handleKeydown(e) {
-    if (e.repeat) return
+    if (!consumeKey(e)) return
     if (!open) {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault()
