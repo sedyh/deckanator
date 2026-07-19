@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -27,6 +28,9 @@ var blockedJVMArgs = []string{
 // the java runtime resolver.
 type LaunchOptions struct {
 	EnsureJava func(component string, progress ProgressFunc) (string, error)
+	// OnStarted is called with the game process right after it starts,
+	// letting the caller expose a kill switch for hung games.
+	OnStarted func(p *os.Process)
 }
 
 // Launch starts Minecraft for the given profile. It blocks up to 5s to
@@ -55,6 +59,12 @@ func Launch(p profile.Profile, opts LaunchOptions) error {
 
 	mainClass := vanilla.MainClass
 	var extraLibs []Library
+
+	// A profile whose saved loader version was lost must not silently
+	// launch as vanilla: recover the version from the versions dir.
+	if IsFabricLike(p.Loader) && p.FabricLoaderVersion == "" {
+		p.FabricLoaderVersion = InstalledLoaderVersion(p.Loader, mcVersion)
+	}
 
 	if IsFabricLike(p.Loader) && p.FabricLoaderVersion != "" {
 		id := loaderProfileID(p.Loader, mcVersion, p.FabricLoaderVersion)
@@ -121,35 +131,39 @@ func Launch(p profile.Profile, opts LaunchOptions) error {
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start: %w", err)
 	}
-
-	done := make(chan error, 1)
-	go func() { done <- cmd.Wait() }()
-
-	select {
-	case err := <-done:
-		if logFile != nil {
-			_ = logFile.Close()
-		}
-		tail := extractLogTail(logPath)
-		if err != nil {
-			if tail != "" {
-				return fmt.Errorf("minecraft crashed (%w):\n%s", err, tail)
-			}
-			return fmt.Errorf("minecraft crashed immediately (%w) - log: %s", err, logPath)
-		}
-		if tail != "" {
-			return fmt.Errorf("minecraft exited immediately:\n%s", tail)
-		}
-		return fmt.Errorf("minecraft exited immediately - log: %s", logPath)
-	case <-time.After(5 * time.Second):
-		go func() {
-			_ = cmd.Wait()
-			if logFile != nil {
-				_ = logFile.Close()
-			}
-		}()
-		return nil
+	if opts.OnStarted != nil {
+		opts.OnStarted(cmd.Process)
 	}
+
+	// Block until the game exits: a crash at any point (not just within
+	// a startup window) must surface its trace instead of the launcher
+	// quitting itself while the game is still booting.
+	started := time.Now()
+	waitErr, hung := waitWithWatchdog(cmd, logPath)
+	ran := time.Since(started)
+	if logFile != nil {
+		_ = logFile.Close()
+	}
+	tail, foundChain := extractLogTail(logPath)
+	if hung {
+		if tail != "" {
+			return fmt.Errorf("minecraft hung during startup and was stopped\n\n%s", tail)
+		}
+		return fmt.Errorf("minecraft hung during startup and was stopped - log: %s", logPath)
+	}
+	if waitErr != nil {
+		if tail != "" {
+			return fmt.Errorf("minecraft crashed (%w)\n\n%s", waitErr, tail)
+		}
+		return fmt.Errorf("minecraft crashed (%w) - log: %s", waitErr, logPath)
+	}
+	// Exit code 0 can still be a crash: a dead main thread winds the JVM
+	// down "cleanly" (Quilt's error path does exactly this). A short run
+	// that left an exception chain in the log is not a normal quit.
+	if foundChain && ran < 2*time.Minute {
+		return fmt.Errorf("minecraft exited unexpectedly\n\n%s", tail)
+	}
+	return nil
 }
 
 func buildArgs(v *VersionDetails, vars map[string]string) (jvm, game []string) {
@@ -283,38 +297,139 @@ func filterJVMArgs(args []string) []string {
 	return out
 }
 
-func extractLogTail(logPath string) string {
+// waitWithWatchdog waits for the game to exit. During the startup
+// window a booting game logs constantly, so a long silence there means
+// it hung (e.g. a loader stuck on an error it can't display): the
+// process is killed and hung=true is returned. After the window the
+// game is assumed interactive and quiet logs are normal.
+func waitWithWatchdog(cmd *exec.Cmd, logPath string) (waitErr error, hung bool) {
+	const (
+		startupWindow = 5 * time.Minute
+		stallLimit    = 90 * time.Second
+		pollEvery     = 2 * time.Second
+	)
+	done := make(chan error, 1)
+	go func() { done <- cmd.Wait() }()
+
+	deadline := time.Now().Add(startupWindow)
+	lastSize := int64(-1)
+	lastGrowth := time.Now()
+	ticker := time.NewTicker(pollEvery)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case err := <-done:
+			return err, false
+		case <-ticker.C:
+			if time.Now().After(deadline) {
+				continue
+			}
+			if fi, err := os.Stat(logPath); err == nil && fi.Size() != lastSize {
+				lastSize = fi.Size()
+				lastGrowth = time.Now()
+				continue
+			}
+			if time.Since(lastGrowth) > stallLimit {
+				_ = cmd.Process.Kill()
+				return <-done, true
+			}
+		}
+	}
+}
+
+// exceptionHeaderRe matches a Java exception header line: an optional
+// "Caused by:" prefix, a dotted class path ending in Exception/Error/
+// Throwable, and an optional message.
+var exceptionHeaderRe = regexp.MustCompile(`^(Exception in thread "[^"]*" )?(Caused by: |Suppressed: )?([\w$]+\.)+[\w$]+(Exception|Error|Throwable)\b`)
+
+func isFrameLine(s string) bool {
+	return strings.HasPrefix(s, "at ") || strings.HasPrefix(s, "... ")
+}
+
+func isHeaderLine(s string) bool {
+	return !isFrameLine(s) && exceptionHeaderRe.MatchString(s)
+}
+
+// extractLogTail pulls the last exception chain out of the launcher
+// log. The boolean reports whether an actual exception chain was found
+// (as opposed to the generic last-lines fallback).
+func extractLogTail(logPath string) (string, bool) {
 	data, err := os.ReadFile(logPath)
 	if err != nil || len(data) == 0 {
-		return ""
+		return "", false
 	}
 	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
-	var relevant []string
-	for _, l := range lines {
-		l = strings.TrimSpace(l)
-		if l == "" {
+
+	// Walk up from the end over frame/header lines; the topmost header of
+	// that contiguous block starts the final exception chain.
+	end, topHeader := -1, -1
+	for i := len(lines) - 1; i >= 0; i-- {
+		t := strings.TrimSpace(lines[i])
+		if t == "" {
+			if end != -1 {
+				break
+			}
 			continue
 		}
-		if strings.HasPrefix(l, "Error") ||
-			strings.HasPrefix(l, "Exception") ||
-			strings.HasPrefix(l, "Caused by") ||
-			strings.HasPrefix(l, "Unrecognized") ||
-			strings.Contains(l, "fatal") ||
-			strings.Contains(l, "Fatal") {
-			relevant = append(relevant, l)
+		switch {
+		case isFrameLine(t):
+			if end == -1 {
+				end = i
+			}
+		case isHeaderLine(t):
+			if end == -1 {
+				end = i
+			}
+			topHeader = i
+		default:
+			if end != -1 {
+				i = -1 // stop: left the exception block
+			}
+		}
+		if end != -1 && i == -1 {
+			break
 		}
 	}
-	if len(relevant) == 0 {
-		n := 5
-		if len(lines) < n {
-			n = len(lines)
+	if topHeader >= 0 && end >= topHeader {
+		return formatExceptionChain(lines[topHeader : end+1]), true
+	}
+
+	// No exception chain: fall back to the last few meaningful lines.
+	tail := make([]string, 0, 5)
+	for _, l := range lines {
+		if t := strings.TrimSpace(l); t != "" {
+			tail = append(tail, t)
 		}
-		relevant = lines[len(lines)-n:]
 	}
-	if len(relevant) > 6 {
-		relevant = relevant[len(relevant)-6:]
+	if len(tail) > 5 {
+		tail = tail[len(tail)-5:]
 	}
-	return strings.Join(relevant, "\n")
+	return strings.Join(tail, "\n"), false
+}
+
+// formatExceptionChain re-indents a header+frames block. The full chain
+// is kept (the UI scrolls it, pinned to the end where the root cause
+// lives); only absurdly long chains are trimmed from the top.
+func formatExceptionChain(chain []string) string {
+	var out []string
+	for _, l := range chain {
+		t := strings.TrimSpace(l)
+		if t == "" {
+			continue
+		}
+		if isFrameLine(t) {
+			out = append(out, "  "+t)
+			continue
+		}
+		out = append(out, t)
+	}
+	const maxLines = 200
+	if len(out) > maxLines {
+		skipped := len(out) - maxLines
+		out = append([]string{fmt.Sprintf("… %d earlier lines …", skipped)}, out[len(out)-maxLines:]...)
+	}
+	return strings.Join(out, "\n")
 }
 
 func loadVersionDetailsFile(path string) (*VersionDetails, error) {

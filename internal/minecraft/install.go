@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"deckanator/internal/config"
@@ -327,4 +328,23 @@ func shouldInclude(lib Library) bool {
 // fabric-like loaders: "<loader>-loader-<loaderVersion>-<mcVersion>".
 func loaderProfileID(loader, mcVersion, loaderVersion string) string {
 	return fmt.Sprintf("%s-loader-%s-%s", loader, loaderVersion, mcVersion)
+}
+
+// InstalledLoaderVersion detects the loader version installed for
+// (loader, mcVersion) by scanning the versions directory, or "" if
+// none. Used to recover profiles whose saved loader version was lost.
+func InstalledLoaderVersion(loader, mcVersion string) string {
+	entries, err := os.ReadDir(filepath.Join(config.GameDir(), "versions"))
+	if err != nil {
+		return ""
+	}
+	prefix := loader + "-loader-"
+	suffix := "-" + mcVersion
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() && strings.HasPrefix(name, prefix) && strings.HasSuffix(name, suffix) {
+			return strings.TrimSuffix(strings.TrimPrefix(name, prefix), suffix)
+		}
+	}
+	return ""
 }

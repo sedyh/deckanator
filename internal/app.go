@@ -11,12 +11,15 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
+	"sync"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"deckanator/internal/config"
 	"deckanator/internal/icons"
 	"deckanator/internal/java"
+	"deckanator/internal/mclogs"
 	"deckanator/internal/minecraft"
 	"deckanator/internal/modrinth"
 	"deckanator/internal/profile"
@@ -27,6 +30,26 @@ import (
 type App struct {
 	ctx     context.Context
 	version string
+
+	procMu   sync.Mutex
+	gameProc *os.Process
+}
+
+func (a *App) setGameProc(p *os.Process) {
+	a.procMu.Lock()
+	a.gameProc = p
+	a.procMu.Unlock()
+}
+
+// StopGame force-kills the running game process, if any. Used when the
+// game hangs and stops responding.
+func (a *App) StopGame() {
+	a.procMu.Lock()
+	p := a.gameProc
+	a.procMu.Unlock()
+	if p != nil {
+		_ = p.Kill()
+	}
 }
 
 // New returns an App ready to be handed to Wails. version is the build
@@ -131,6 +154,87 @@ func (a *App) InstallMod(profileID, projectID, title, description, projectType, 
 	return modrinth.Install(profileID, projectID, title, description, projectType, iconURL, versionID, downloadURL, filename)
 }
 
+// GetLauncherLog returns the full launcher log, for copying complete
+// crash output to the clipboard.
+func (a *App) GetLauncherLog() string {
+	data, err := os.ReadFile(filepath.Join(config.GameDir(), "launcher.log"))
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+
+// InstalledLoaderVersion detects the loader version installed for
+// (loader, mcVersion) from the versions directory, or "" if none.
+// Recovers profiles whose saved loader version was lost.
+func (a *App) InstalledLoaderVersion(loader, mcVersion string) string {
+	return minecraft.InstalledLoaderVersion(loader, mcVersion)
+}
+
+// AnalyzeCrash runs the most relevant logs through mclo.gs' stateless
+// analysis endpoint and returns detected problems with solutions.
+// Sources, by recency: the profile's newest crash report, the game's
+// latest.log, and the launcher log; the two freshest are analyzed and
+// merged, since crash reports and game logs carry the structured
+// formats the analyzer knows best.
+func (a *App) AnalyzeCrash(profileID string) (mclogs.Analysis, error) {
+	sources := crashLogSources(profileID)
+	if len(sources) == 0 {
+		return mclogs.Analysis{}, fmt.Errorf("no logs found")
+	}
+	return mclogs.AnalyzeFiles(sources)
+}
+
+// crashLogSources returns up to the two freshest crash-relevant logs.
+func crashLogSources(profileID string) []string {
+	type source struct {
+		path string
+		mod  int64
+	}
+	var sources []source
+	add := func(path string) {
+		if fi, err := os.Stat(path); err == nil {
+			sources = append(sources, source{path, fi.ModTime().UnixNano()})
+		}
+	}
+	if profileID != "" {
+		add(newestFile(filepath.Join(config.GameDir(), "profiles", profileID, "crash-reports")))
+		add(filepath.Join(config.GameDir(), "profiles", profileID, "logs", "latest.log"))
+	}
+	add(filepath.Join(config.GameDir(), "launcher.log"))
+	sort.Slice(sources, func(i, j int) bool { return sources[i].mod > sources[j].mod })
+	if len(sources) > 2 {
+		sources = sources[:2]
+	}
+	paths := make([]string, len(sources))
+	for i, s := range sources {
+		paths[i] = s.path
+	}
+	return paths
+}
+
+// newestFile returns the most recently modified regular file in dir.
+func newestFile(dir string) string {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return ""
+	}
+	newest, newestMod := "", int64(0)
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
+		if m := info.ModTime().UnixNano(); m > newestMod {
+			newest, newestMod = filepath.Join(dir, e.Name()), m
+		}
+	}
+	return newest
+}
+
 // CountWorlds returns the number of created worlds in the profile.
 func (a *App) CountWorlds(profileID string) int {
 	entries, err := os.ReadDir(filepath.Join(config.GameDir(), "profiles", profileID, "saves"))
@@ -178,10 +282,21 @@ func (a *App) Launch(profileID string) error {
 			EnsureJava: func(component string, pf minecraft.ProgressFunc) (string, error) {
 				return java.Ensure(component, java.ProgressFunc(pf))
 			},
+			OnStarted: a.setGameProc,
 		}); err != nil {
+			a.setGameProc(nil)
 			return err
 		}
-		wailsruntime.Quit(a.ctx)
+		a.setGameProc(nil)
+		// Auto-quit after a clean game exit only on the Deck (Linux),
+		// where the launcher hands the Steam session over to the game.
+		// On macOS Quit from a binding deadlocks the main thread (the
+		// termination sequence waits for the in-flight binding, which is
+		// blocked inside Quit), freezing all input — and keeping the
+		// launcher open after the game closes is desirable there anyway.
+		if runtime.GOOS == "linux" {
+			go wailsruntime.Quit(a.ctx)
+		}
 		return nil
 	}
 	return fmt.Errorf("profile not found: %s", profileID)

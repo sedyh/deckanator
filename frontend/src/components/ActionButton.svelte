@@ -17,7 +17,7 @@
   $: pct   = progress.total > 0 ? Math.round(progress.current * 100 / progress.total) : 0
   $: label = installing
     ? (progress.stage || 'Installing...')
-    : launching ? 'Launching...'
+    : launching ? 'Stop'
     : installed ? 'Play' : 'Download'
 </script>
 
@@ -28,11 +28,12 @@
     class:play={installed && !installing && !launching}
     class:launching
     class:installing
-    disabled={disabled || installing || launching}
+    disabled={disabled || installing}
     on:click={() => {
-      if (installing || launching) return
-      if (installed) dispatch('launch')
-      else           dispatch('install')
+      if (installing) return
+      if (launching)  { dispatch('stop'); return }
+      if (installed)  dispatch('launch')
+      else            dispatch('install')
     }}
   >
     {#if installing}

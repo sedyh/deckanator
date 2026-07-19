@@ -3,9 +3,14 @@ package minecraft
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"deckanator/internal/request"
 )
+
+// versionListTTL is how long version lists (Mojang manifest, loader and
+// game version lists) are served from cache before re-fetching.
+const versionListTTL = time.Hour
 
 const manifestURL = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json"
 
@@ -64,7 +69,7 @@ func FetchLoaderGameVersions(loader string) ([]string, error) {
 		Version string `json:"version"`
 		Stable  bool   `json:"stable"`
 	}
-	if err := request.JSON(ep.game, &raw); err != nil {
+	if err := request.CachedJSON(ep.game, &raw, versionListTTL); err != nil {
 		return nil, err
 	}
 	out := make([]string, 0, len(raw))
@@ -88,7 +93,7 @@ func FetchLoaderVersions(loader, mcVersion string) ([]FabricLoaderVersion, error
 	var entries []struct {
 		Loader FabricLoaderVersion `json:"loader"`
 	}
-	if err := request.JSON(fmt.Sprintf(ep.loadersByGame, mcVersion), &entries); err != nil {
+	if err := request.CachedJSON(fmt.Sprintf(ep.loadersByGame, mcVersion), &entries, versionListTTL); err != nil {
 		return nil, err
 	}
 	all := make([]FabricLoaderVersion, len(entries))
@@ -118,7 +123,7 @@ func isPrerelease(version string) bool {
 
 func fetchManifest() (*VersionManifest, error) {
 	var m VersionManifest
-	if err := request.JSON(manifestURL, &m); err != nil {
+	if err := request.CachedJSON(manifestURL, &m, versionListTTL); err != nil {
 		return nil, err
 	}
 	return &m, nil

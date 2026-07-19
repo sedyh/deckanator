@@ -1,10 +1,11 @@
 <script>
   import { onMount, onDestroy, tick } from 'svelte'
-  import { EventsOn } from '../wailsjs/runtime/runtime.js'
+  import { EventsOn, ClipboardSetText } from '../wailsjs/runtime/runtime.js'
   import {
     GetProfiles, CreateProfile, SaveProfile, DeleteProfile, GetIcons,
     GetVanillaVersions, GetLoaderVersions, GetLoaderGameVersions,
-    IsInstalled, Install, Launch, CleanGameData, GetVersion
+    IsInstalled, Install, Launch, CleanGameData, GetVersion, AnalyzeCrash,
+    InstalledLoaderVersion, GetLauncherLog, StopGame
   } from '../wailsjs/go/internal/App.js'
 
   import Carousel       from './components/Carousel.svelte'
@@ -79,6 +80,97 @@
     ? (savedProgress.total > 0 ? Math.round(savedProgress.current * 100 / savedProgress.total) : 0)
     : -1
 
+  // Rule-based crash summaries: match the whole error text against known
+  // Java failure patterns; fall back to the root-cause exception line.
+  const ERROR_HINTS = [
+    [/UnsupportedClassVersionError/, 'Java is too old for this loader or mod'],
+    [/Unsupported class file (major )?version/, 'The loader version is too old for this Minecraft version'],
+    [/OutOfMemoryError/, 'The game ran out of memory'],
+    [/NoClassDefFoundError|ClassNotFoundException/, 'A required class is missing: incompatible loader or missing dependency'],
+    [/NoSuchMethodError|NoSuchFieldError|IncompatibleClassChangeError|AbstractMethodError/, 'Incompatible mod or loader version'],
+    [/DuplicateModsFound|duplicate mods/i, 'Two copies of the same mod are installed'],
+    [/requires (any )?version|depends on|is missing|Unmet dependency|Dependency/i, 'A mod dependency problem'],
+    [/AccessDeniedException|Permission denied/i, 'File permission problem'],
+    [/UnknownHostException|Connection refused|SocketTimeout/i, 'Network problem during startup'],
+    [/GLFW|EGL error|OpenGL|libGL/i, 'Graphics initialization failed'],
+  ]
+
+  function rootCause(text) {
+    const lines = text.split('\n')
+    let cause = ''
+    for (const raw of lines) {
+      const l = raw.trim()
+      if (l.startsWith('at ')) continue
+      const m = l.match(/^(?:Exception in thread "[^"]*" )?(Caused by: )?((?:[\w$]+\.)+([\w$]+(?:Exception|Error|Throwable)))(?::\s*(.*))?$/)
+      if (!m) continue
+      const short = m[3] + (m[4] ? ': ' + m[4] : '')
+      if (m[1] || !cause) cause = short
+    }
+    return cause
+  }
+
+  function summarizeError(text) {
+    if (!text) return ''
+    const cause = rootCause(text)
+    for (const [re, hint] of ERROR_HINTS) {
+      if (re.test(text)) return hint
+    }
+    if (cause) return cause.length > 120 ? cause.slice(0, 117) + '…' : cause
+    return text.split('\n')[0]?.slice(0, 120) ?? 'Unknown error'
+  }
+
+  // Display copy: capitalized first letter (error strings are lowercase
+  // by Go convention).
+  $: errorDisplay = error ? error[0].toUpperCase() + error.slice(1) : ''
+
+  // Pin the trace to its end: the deepest "Caused by" is the root cause.
+  // Guarded per error value: tick() inside a reactive block re-triggers
+  // the flush in native WebKit, which would loop this block forever.
+  let errorBodyEl
+  let _scrolledFor = ''
+  $: if (errorDisplay && errorDisplay !== _scrolledFor && errorBodyEl) {
+    _scrolledFor = errorDisplay
+    tick().then(() => {
+      if (errorBodyEl) errorBodyEl.scrollTop = errorBodyEl.scrollHeight
+    })
+  }
+
+  let errorCopied = false
+  async function copyError() {
+    // The panel shows a condensed trace; copy the full launcher log.
+    let text = error
+    try {
+      const full = await GetLauncherLog()
+      if (full) text = full
+    } catch {}
+    try { await navigator.clipboard.writeText(text) }
+    catch { try { ClipboardSetText(text) } catch {} }
+    errorCopied = true
+    setTimeout(() => { errorCopied = false }, 1500)
+  }
+
+  // Online analysis via mclo.gs (stateless /analyse: the log is not
+  // stored or published server-side).
+  let analysis      = null
+  let analyzing     = false
+  let analysisError = ''
+  let _prevErrorText = ''
+  $: if (error !== _prevErrorText) {
+    _prevErrorText = error
+    analysis = null
+    analyzing = false
+    analysisError = ''
+  }
+
+  async function analyzeError() {
+    if (analyzing) return
+    analyzing = true
+    analysisError = ''
+    try { analysis = await AnalyzeCrash(profile?.id ?? '') }
+    catch (e) { analysis = null; analysisError = String(e) }
+    analyzing = false
+  }
+
   $: profile = profiles[selectedIndex] ?? null
 
   let _prevProfileId = ''
@@ -93,8 +185,12 @@
   async function syncProfile(p) {
     loader = p.loader || 'vanilla'
     await ensureGameSet(loader)
-    const mc  = p.mcVersion           || filterMC(mcVersions, loader, loaderGameSets)[0]?.id || ''
-    const fab = p.fabricLoaderVersion || ''
+    const mc  = p.mcVersion || filterMC(mcVersions, loader, loaderGameSets)[0]?.id || ''
+    let fab = p.fabricLoaderVersion || ''
+    if (!fab && FABRIC_LIKE.includes(loader) && mc) {
+      // Saved loader version lost: recover it from the versions dir.
+      try { fab = await InstalledLoaderVersion(loader, mc) } catch { fab = '' }
+    }
     selectedMC = mc
     if (mc) await loadLoaderVersions(mc, fab)
     if (!installing && p.mcVersion) await checkInstalled()
@@ -140,17 +236,19 @@
   }
 
   async function loadLoaderVersions(mcVersion, preferred = '') {
-    if (!isFabricLike || !mcVersion) {
+    // Direct check instead of the reactive isFabricLike: this runs right
+    // after `loader` was assigned, before Svelte re-derives it.
+    if (!FABRIC_LIKE.includes(loader) || !mcVersion) {
       fabricVersions = []
       selectedFabric = ''
       return
     }
-    const versions = await GetLoaderVersions(loader, mcVersion)
-    const target = preferred && versions.find(v => v.version === preferred)
-      ? preferred
-      : versions[0]?.version ?? ''
+    let versions = []
+    try { versions = await GetLoaderVersions(loader, mcVersion) } catch { versions = [] }
     fabricVersions = versions
-    selectedFabric = target
+    // The profile's saved version always wins: it's what is actually on
+    // disk, even if the meta list is unavailable or no longer lists it.
+    selectedFabric = preferred || versions[0]?.version || ''
   }
 
   async function checkInstalled() {
@@ -220,6 +318,13 @@
     }
   }
 
+  let stopRequested = false
+
+  async function handleStop() {
+    stopRequested = true
+    try { await StopGame() } catch {}
+  }
+
   async function handleLaunch() {
     if (!profile) return
     error = ''
@@ -231,8 +336,8 @@
       fabricLoaderVersion: isFabricLike ? selectedFabric : ''
     })
     try { await Launch(profile.id) }
-    catch (e) { error = String(e) }
-    finally { launching = false }
+    catch (e) { if (!stopRequested) error = String(e) }
+    finally { launching = false; stopRequested = false }
   }
 
   async function handleCreate() {
@@ -530,11 +635,39 @@
           disabled={!profile || !selectedMC || (isFabricLike && !selectedFabric) || (!!activeInstallId && !installing)}
           on:install={handleInstall}
           on:launch={handleLaunch}
+          on:stop={handleStop}
         />
       </section>
 
       <div class="error-side" class:visible={!!error}>
-        <div class="error-content">{error}</div>
+        <div class="error-content">
+          <div class="error-head">
+            <span class="error-summary">{summarizeError(errorDisplay)}</span>
+            <button class="error-copy" on:click={analyzeError} tabindex="-1" disabled={analyzing}>
+              {analyzing ? '…' : 'Analyze'}
+            </button>
+            <button class="error-copy" class:copied={errorCopied} on:click={copyError} tabindex="-1">
+              Copy
+            </button>
+          </div>
+          {#if analysis || analysisError}
+            <div class="error-analysis">
+              {#if analysisError}
+                <div class="an-none">Analysis failed: {analysisError}</div>
+              {:else if analysis.problems?.length > 0}
+                {#each analysis.problems as p}
+                  <div class="an-problem">{p.message}</div>
+                  {#each p.solutions ?? [] as s}
+                    <div class="an-solution">&bull; {s.message}</div>
+                  {/each}
+                {/each}
+              {:else}
+                <div class="an-none">No known problems detected by mclo.gs</div>
+              {/if}
+            </div>
+          {/if}
+          <pre class="error-body" bind:this={errorBodyEl}>{errorDisplay}</pre>
+        </div>
       </div>
     </div>
   </div>
@@ -652,6 +785,7 @@
   }
 
   .error-side {
+    position: relative;
     width: 0;
     overflow: hidden;
     transition: width 300ms cubic-bezier(.25,.46,.45,.94);
@@ -661,16 +795,20 @@
     width: 16rem;
   }
 
+  /* Absolutely positioned so the error panel never grows the row: its
+     height is dictated by the settings panel, and the trace body (the
+     least important part) is clipped and scrolls inside. */
   .error-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
     width: 16rem;
-    height: 100%;
-    padding: 0.56rem 0.78rem;
-    font-size: 0.67rem;
-    color: var(--red);
-    line-height: 1.6;
-    white-space: pre-wrap;
-    word-break: break-word;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
     background: rgba(215, 95, 95, 0.07);
+    border: 1px solid rgba(215, 95, 95, 0.4);
     opacity: 0;
     transform: translateX(0.5rem);
     transition: opacity 200ms ease 150ms, transform 200ms ease 150ms;
@@ -678,6 +816,81 @@
   .error-side.visible .error-content {
     opacity: 1;
     transform: translateX(0);
+  }
+
+  .error-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.44rem;
+    padding: 0.44rem 0.56rem;
+    border-bottom: 1px solid rgba(215, 95, 95, 0.25);
+    flex-shrink: 0;
+  }
+
+  .error-summary {
+    flex: 1;
+    font-size: 0.61rem;
+    font-weight: 700;
+    line-height: 1.4;
+    color: var(--red);
+    word-break: break-word;
+  }
+
+  .error-copy {
+    flex-shrink: 0;
+    padding: 0.17rem 0.44rem;
+    font-size: 0.56rem;
+    font-weight: 700;
+    color: var(--red);
+    background: rgba(215, 95, 95, 0.15);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background var(--t);
+  }
+  .error-copy:hover:not(:disabled) { background: rgba(215, 95, 95, 0.3); }
+  .error-copy:disabled { opacity: 0.6; cursor: default; }
+  .error-copy.copied {
+    color: #8be8a0;
+    background: rgba(139, 232, 160, 0.15);
+  }
+
+  .error-analysis {
+    flex-shrink: 0;
+    max-height: 45%;
+    overflow-y: auto;
+    padding: 0.44rem 0.56rem;
+    border-bottom: 1px solid rgba(215, 95, 95, 0.25);
+    font-size: 0.56rem;
+    line-height: 1.5;
+    scrollbar-width: thin;
+  }
+  .an-problem {
+    font-weight: 700;
+    color: var(--red);
+    word-break: break-word;
+  }
+  .an-problem:not(:first-child) { margin-top: 0.33rem; }
+  .an-solution {
+    color: var(--text);
+    opacity: 0.9;
+    word-break: break-word;
+  }
+  .an-none { color: var(--text-sub); }
+
+  .error-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0.44rem 0.56rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.5rem;
+    line-height: 1.5;
+    color: var(--red);
+    white-space: pre-wrap;
+    word-break: break-word;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(215, 95, 95, 0.3) transparent;
   }
 
   .new-profile-btn {

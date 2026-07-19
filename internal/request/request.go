@@ -3,11 +3,18 @@
 package request
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
+	"sync"
+	"time"
 
+	"deckanator/internal/config"
 	"deckanator/internal/errs"
 )
 
@@ -33,4 +40,71 @@ func JSON(url string, v any) error {
 		return err
 	}
 	return json.Unmarshal(data, v)
+}
+
+var (
+	cacheMu  sync.Mutex
+	memCache = map[string]cacheEntry{}
+)
+
+type cacheEntry struct {
+	data []byte
+	at   time.Time
+}
+
+func cachePath(url string) string {
+	sum := sha1.Sum([]byte(url))
+	return filepath.Join(config.ConfigDir(), "cache", hex.EncodeToString(sum[:])+".json")
+}
+
+// CachedJSON is JSON with a two-level cache: an in-memory map for the
+// session and a disk cache under the config dir across sessions.
+// Entries younger than ttl are served without touching the network; on
+// fetch failure a stale entry of any age is used as a fallback.
+func CachedJSON(url string, v any, ttl time.Duration) error {
+	cacheMu.Lock()
+	entry, inMem := memCache[url]
+	cacheMu.Unlock()
+
+	if inMem && time.Since(entry.at) < ttl {
+		return json.Unmarshal(entry.data, v)
+	}
+
+	path := cachePath(url)
+	var diskData []byte
+	var diskAt time.Time
+	if fi, err := os.Stat(path); err == nil {
+		if data, err := os.ReadFile(path); err == nil {
+			diskData, diskAt = data, fi.ModTime()
+		}
+	}
+	if diskData != nil && time.Since(diskAt) < ttl {
+		cacheMu.Lock()
+		memCache[url] = cacheEntry{diskData, diskAt}
+		cacheMu.Unlock()
+		return json.Unmarshal(diskData, v)
+	}
+
+	data, err := Bytes(url)
+	if err == nil {
+		if json.Unmarshal(data, v) == nil {
+			cacheMu.Lock()
+			memCache[url] = cacheEntry{data, time.Now()}
+			cacheMu.Unlock()
+			if mkErr := os.MkdirAll(filepath.Dir(path), 0o755); mkErr == nil {
+				_ = os.WriteFile(path, data, 0o644)
+			}
+			return nil
+		}
+		return fmt.Errorf("invalid JSON from %s", url)
+	}
+
+	// Network failed: fall back to any stale copy.
+	if inMem {
+		return json.Unmarshal(entry.data, v)
+	}
+	if diskData != nil {
+		return json.Unmarshal(diskData, v)
+	}
+	return err
 }
