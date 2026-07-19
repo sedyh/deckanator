@@ -18,6 +18,13 @@
   export function focusFabric() { fabricSel?.focus() }
   export function focusJava()   { javaSel?.focus() }
 
+  export function fieldOfNode(n) {
+    if (mcSel?.containsNode(n))     return 'mc'
+    if (fabricSel?.containsNode(n)) return 'fabric'
+    if (javaSel?.containsNode(n))   return 'java'
+    return null
+  }
+
   $: mcOptions     = mcVersions.map(v => ({ value: v.id, label: v.id }))
   $: fabricOptions = fabricVersions.map(v => ({ value: v.version, label: v.version }))
   $: javaOptions   = javaOptionsForMC(selectedMC)

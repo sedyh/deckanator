@@ -12,6 +12,7 @@
 
   let btnEl
   export function focus() { btnEl?.focus() }
+  export function containsNode(n) { return !!(btnEl && n && btnEl.contains(n)) }
 
   $: pct   = progress.total > 0 ? Math.round(progress.current * 100 / progress.total) : 0
   $: label = installing

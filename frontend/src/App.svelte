@@ -281,6 +281,26 @@
     }
   }
 
+  // Keep panelIdx in sync when focus lands in the panel by mouse (clicking
+  // a select focuses its trigger programmatically), so keyboard navigation
+  // continues from the clicked element instead of a stale position.
+  function handlePanelFocusIn(e) {
+    const t = e.target
+    let idx = -1
+    if (newProfileBtnEl && newProfileBtnEl.contains(t)) idx = 0
+    else if (versionSelRef) {
+      const field = versionSelRef.fieldOfNode(t)
+      if (field === 'mc') idx = 1
+      else if (field === 'fabric') idx = 2
+      else if (field === 'java') idx = 3
+    }
+    if (idx === -1 && actionBtnRef?.containsNode(t)) idx = 4
+    if (idx >= 0 && idx !== panelIdx) {
+      panelIdx = idx
+      lastFocus = { mode: 'panel', idx }
+    }
+  }
+
   function handleGlobalKey(e) {
     // Ownership checks come first: consumeKey must only run when this
     // handler will actually route the event, otherwise it poisons the
@@ -425,7 +445,7 @@
     </section>
 
     <div class="panel-row">
-      <section class="panel" on:focusout={(e) => {
+      <section class="panel" on:focusin={handlePanelFocusIn} on:focusout={(e) => {
         if (!suppressBlur && panelIdx >= 0 && !e.currentTarget.contains(/** @type {Node} */ (e.relatedTarget))) {
           lastFocus = { mode: 'panel', idx: panelIdx }
           panelIdx = -1

@@ -21,6 +21,10 @@
     triggerEl?.querySelector('.trigger')?.focus()
   }
 
+  export function containsNode(n) {
+    return !!(triggerEl && n && triggerEl.contains(n))
+  }
+
   export function openMenu() {
     if (!disabled) openDropdown()
   }
@@ -52,7 +56,23 @@
   function select(v) {
     value = v
     closeDropdown()
+    // A mouse click on an item leaves focus on a button that's now gone;
+    // return it to the trigger so keyboard navigation keeps working.
+    focus()
     dispatch('change', v)
+  }
+
+  let lastMouseX = -1
+  let lastMouseY = -1
+
+  // WebKit synthesizes a mousemove after programmatic scroll to refresh
+  // hover state; its coordinates match the last real pointer position.
+  // Only physical movement may steal the highlight from the keyboard.
+  function onItemMouseMove(e, i) {
+    if (e.clientX === lastMouseX && e.clientY === lastMouseY) return
+    lastMouseX = e.clientX
+    lastMouseY = e.clientY
+    highlightedIdx = i
   }
 
   function scrollToHighlighted() {
@@ -79,6 +99,10 @@
 
   async function toggle() {
     if (disabled) return
+    // macOS WebKit doesn't focus buttons on mouse click, but all dropdown
+    // key handling lives on the trigger's keydown — focus it explicitly so
+    // an open-by-click dropdown still receives arrows/Enter/Escape.
+    focus()
     if (open) closeDropdown()
     else await openDropdown()
   }
@@ -145,7 +169,7 @@
           class:highlighted={i === highlightedIdx}
           role="option"
           aria-selected={opt.value === value}
-          on:mouseenter={() => highlightedIdx = i}
+          on:mousemove={(e) => onItemMouseMove(e, i)}
           on:click|stopPropagation={() => select(opt.value)}
         >
           {opt.label}
@@ -229,7 +253,9 @@
     background: transparent;
     white-space: nowrap;
   }
-  .item:hover,
+  /* Highlight is driven solely by highlightedIdx: mousemove (not enter,
+     which also fires when the list scrolls under a stationary cursor)
+     updates it, so keyboard and mouse never fight over two highlights. */
   .item.highlighted { background: rgba(255,255,255,0.14); color: var(--text); }
   .item.active { color: var(--text); background: rgba(30,143,255,0.15); }
   .item.active.highlighted { background: rgba(30,143,255,0.3); }

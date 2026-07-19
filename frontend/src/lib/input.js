@@ -25,6 +25,9 @@
 //     a 500ms warm-up to avoid libmanette init-time asserts.
 //   - Input processing stops when the window loses focus so Steam Deck
 //     overlays (QAM, keyboard) don't receive doubled events.
+//   - Native OS autorepeat is always rejected; actions marked repeat
+//     generate their own repeats in the poll loop instead (works uniformly
+//     for held keys and held gamepad buttons).
 
 const DEFAULT_DEADZONE = 0.5
 const AXIS_RELEASE_DEADZONE = 0.3
@@ -36,6 +39,10 @@ const GAMEPAD_WARMUP_MS = 500
 // Two gamepads whose timestamps differ by less than this are treated as
 // the same physical device (Steam Input masked copy).
 const MASKED_GAMEPAD_TIMESTAMP_DELTA = 10
+// Self-driven repeat for held directional actions. The interval must stay
+// above MIN_ACCEPT_GAP_MS or consumeKey would reject the repeats.
+const REPEAT_DELAY_MS = 400
+const REPEAT_INTERVAL_MS = 150
 
 const actionDefs = new Map()
 const actionState = new Map()
@@ -56,8 +63,16 @@ let windowFocused = true
 let gamepadReady = false
 let gamepadReadyAt = 0
 
-export function registerAction(name, triggers, emitKey = null) {
-  actionDefs.set(name, { triggers, emitKey })
+// Stale-key eviction guards against lost keyups (Steam Input can drop
+// them), relying on OS autorepeat to refresh key activity. macOS breaks
+// that assumption: releasing one key mid-hold cancels the pending
+// autorepeat of another (overlapped direction reversal), starving the
+// refresh and evicting a genuinely held key. Keyups there are reliable
+// (and blur clears state), so skip eviction entirely.
+const RELIABLE_KEYUPS = /Mac/i.test(navigator.platform || navigator.userAgent)
+
+export function registerAction(name, triggers, emitKey = null, opts = {}) {
+  actionDefs.set(name, { triggers, emitKey, repeat: opts.repeat === true })
   actionState.set(name, {
     pressed: false,
     strength: 0,
@@ -65,6 +80,7 @@ export function registerAction(name, triggers, emitKey = null) {
     justReleased: false,
     sourceKey: false,
     sourceGamepad: false,
+    nextRepeatAt: 0,
   })
 }
 
@@ -265,6 +281,7 @@ function dispatchSynthetic(emitKey) {
 }
 
 function pruneStale() {
+  if (RELIABLE_KEYUPS) return
   const now = performance.now()
   for (const code of Array.from(keyCodesDown)) {
     const t = lastKeyActivity.get('code:' + code)
@@ -286,6 +303,7 @@ function update() {
   try {
     pruneStale()
     if (windowFocused) {
+      const now = performance.now()
       for (const [name, def] of actionDefs) {
         const s = actionState.get(name)
         const keyPressed = evalKeys(def)
@@ -306,6 +324,14 @@ function update() {
           if (!keyPressed && gpPressed && def.emitKey) {
             dispatchSynthetic(def.emitKey)
           }
+          s.nextRepeatAt = now + REPEAT_DELAY_MS
+        } else if (pressed && def.repeat && def.emitKey && now >= s.nextRepeatAt) {
+          // Self-driven repeat while held (key or gamepad). Native OS
+          // autorepeat never gets through consumeKey, so we unlatch the
+          // key and emit a synthetic press on our own cadence.
+          releaseConsumed(def.emitKey.key)
+          dispatchSynthetic(def.emitKey)
+          s.nextRepeatAt = now + REPEAT_INTERVAL_MS
         }
         if (s.justReleased) {
           fire('released', name)
@@ -344,7 +370,13 @@ function onKeyDown(e) {
   const now = performance.now()
   if (e.code) lastKeyActivity.set('code:' + e.code, now)
   if (e.key) lastKeyActivity.set('key:' + e.key, now)
-  if (e.repeat) return
+  if (e.repeat) {
+    // OS autorepeat is always discarded (we repeat on our own cadence).
+    // Cancel it too: on macOS WKWebView plays the system beep for every
+    // keydown that ends up unhandled.
+    e.preventDefault()
+    return
+  }
   if (e.code) keyCodesDown.add(e.code)
   if (e.key) keyKeysDown.add(e.key)
 }

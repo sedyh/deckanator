@@ -9,13 +9,13 @@ export function setupActions() {
     { type: 'key', key: 'ArrowUp' },
     { type: 'button', index: 12 },
     { type: 'axis', index: 1, sign: -1 },
-  ], { key: 'ArrowUp' })
+  ], { key: 'ArrowUp' }, { repeat: true })
 
   registerAction('ui_down', [
     { type: 'key', key: 'ArrowDown' },
     { type: 'button', index: 13 },
     { type: 'axis', index: 1, sign: 1 },
-  ], { key: 'ArrowDown' })
+  ], { key: 'ArrowDown' }, { repeat: true })
 
   registerAction('ui_left', [
     { type: 'key', key: 'ArrowLeft' },
@@ -23,13 +23,13 @@ export function setupActions() {
     // Diagonal stick motion biases to vertical: horizontal fires only when
     // the perpendicular (Y) axis is quiet.
     { type: 'axis', index: 0, sign: -1, requirePairUnder: { axis: 1, threshold: 0.4 } },
-  ], { key: 'ArrowLeft' })
+  ], { key: 'ArrowLeft' }, { repeat: true })
 
   registerAction('ui_right', [
     { type: 'key', key: 'ArrowRight' },
     { type: 'button', index: 15 },
     { type: 'axis', index: 0, sign: 1, requirePairUnder: { axis: 1, threshold: 0.4 } },
-  ], { key: 'ArrowRight' })
+  ], { key: 'ArrowRight' }, { repeat: true })
 
   registerAction('ui_accept', [
     { type: 'key', key: 'Enter' },
