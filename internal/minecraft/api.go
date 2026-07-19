@@ -2,6 +2,8 @@ package minecraft
 
 import (
 	"fmt"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -100,6 +102,12 @@ func FetchLoaderVersions(loader, mcVersion string) ([]FabricLoaderVersion, error
 	for i, e := range entries {
 		all[i] = e.Loader
 	}
+	// Meta servers return loader lists in no guaranteed order (Quilt's
+	// per-game list is effectively shuffled): sort newest-first ourselves
+	// so [0] is genuinely the latest.
+	sort.SliceStable(all, func(i, j int) bool {
+		return versionLess(all[j].Version, all[i].Version)
+	})
 	stable := make([]FabricLoaderVersion, 0, len(all))
 	for _, v := range all {
 		if !isPrerelease(v.Version) {
@@ -110,6 +118,39 @@ func FetchLoaderVersions(loader, mcVersion string) ([]FabricLoaderVersion, error
 		return all, nil
 	}
 	return stable, nil
+}
+
+func parseVersion(v string) ([]int, string) {
+	base, pre, _ := strings.Cut(v, "-")
+	parts := strings.Split(base, ".")
+	nums := make([]int, len(parts))
+	for i, p := range parts {
+		nums[i], _ = strconv.Atoi(p)
+	}
+	return nums, pre
+}
+
+// versionLess reports whether a is older than b. Numeric components are
+// compared position-wise; equal cores rank releases above pre-releases.
+func versionLess(a, b string) bool {
+	an, ap := parseVersion(a)
+	bn, bp := parseVersion(b)
+	for i := 0; i < len(an) || i < len(bn); i++ {
+		av, bv := 0, 0
+		if i < len(an) {
+			av = an[i]
+		}
+		if i < len(bn) {
+			bv = bn[i]
+		}
+		if av != bv {
+			return av < bv
+		}
+	}
+	if (ap == "") != (bp == "") {
+		return ap != ""
+	}
+	return ap < bp
 }
 
 func isPrerelease(version string) bool {
