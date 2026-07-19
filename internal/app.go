@@ -67,14 +67,16 @@ func (a *App) GetVanillaVersions() ([]minecraft.VersionEntry, error) {
 	return minecraft.FetchVanillaVersions()
 }
 
-// GetFabricLoaderVersions returns Fabric loader versions for mcVersion.
-func (a *App) GetFabricLoaderVersions(mcVersion string) ([]minecraft.FabricLoaderVersion, error) {
-	return minecraft.FetchFabricLoaderVersions(mcVersion)
+// GetLoaderVersions returns loader versions of the given fabric-like
+// loader (fabric, quilt) available for mcVersion.
+func (a *App) GetLoaderVersions(loader, mcVersion string) ([]minecraft.FabricLoaderVersion, error) {
+	return minecraft.FetchLoaderVersions(loader, mcVersion)
 }
 
-// GetFabricGameVersions returns stable game versions supported by Fabric.
-func (a *App) GetFabricGameVersions() ([]string, error) {
-	return minecraft.FetchFabricGameVersions()
+// GetLoaderGameVersions returns stable game versions supported by the
+// given fabric-like loader.
+func (a *App) GetLoaderGameVersions(loader string) ([]string, error) {
+	return minecraft.FetchLoaderGameVersions(loader)
 }
 
 // IsInstalled reports whether the given install is already on disk.
@@ -129,6 +131,21 @@ func (a *App) InstallMod(profileID, projectID, title, description, projectType, 
 	return modrinth.Install(profileID, projectID, title, description, projectType, iconURL, versionID, downloadURL, filename)
 }
 
+// CountWorlds returns the number of created worlds in the profile.
+func (a *App) CountWorlds(profileID string) int {
+	entries, err := os.ReadDir(filepath.Join(config.GameDir(), "profiles", profileID, "saves"))
+	if err != nil {
+		return 0
+	}
+	n := 0
+	for _, e := range entries {
+		if e.IsDir() {
+			n++
+		}
+	}
+	return n
+}
+
 // DeleteMod removes a mod's file and metadata from a profile.
 func (a *App) DeleteMod(profileID, projectID string) error {
 	return modrinth.Delete(profileID, projectID)
@@ -154,6 +171,9 @@ func (a *App) Launch(profileID string) error {
 		if p.ID != profileID {
 			continue
 		}
+		// Worlds created since the last sync need the profile's datapacks
+		// copied in before the game starts.
+		modrinth.SyncWorldDatapacks(profileID)
 		if err := minecraft.Launch(p, minecraft.LaunchOptions{
 			EnsureJava: func(component string, pf minecraft.ProgressFunc) (string, error) {
 				return java.Ensure(component, java.ProgressFunc(pf))

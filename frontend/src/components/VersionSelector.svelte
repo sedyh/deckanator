@@ -9,16 +9,28 @@
   export let selectedFabric = ''
   export let selectedJava = ''
   export let locked = false
+  export let disabled = false
 
   const dispatch = createEventDispatcher()
 
-  let mcSel, fabricSel, javaSel
+  let loaderSel, mcSel, fabricSel, javaSel
 
+  const loaderOptions = [
+    { value: 'vanilla', label: 'Vanilla' },
+    { value: 'fabric',  label: 'Fabric' },
+    { value: 'quilt',   label: 'Quilt' },
+  ]
+
+  $: loaderLabel = loaderOptions.find(o => o.value === loader)?.label ?? loader
+  $: loaderVersionLabel = loader === 'quilt' ? 'Quilt' : 'Fabric'
+
+  export function focusLoader() { loaderSel?.focus() }
   export function focusMC()     { mcSel?.focus() }
   export function focusFabric() { fabricSel?.focus() }
   export function focusJava()   { javaSel?.focus() }
 
   export function fieldOfNode(n) {
+    if (loaderSel?.containsNode(n)) return 'loader'
     if (mcSel?.containsNode(n))     return 'mc'
     if (fabricSel?.containsNode(n)) return 'fabric'
     if (javaSel?.containsNode(n))   return 'java'
@@ -62,12 +74,28 @@
     return [{ value: 'jre-legacy', label: 'Java 8' }]
   }
 
+  function onLoaderChange(e) { loader         = e.detail; dispatch('change', { field: 'loader' }) }
   function onMCChange(e)     { selectedMC     = e.detail; dispatch('change', { field: 'mc' }) }
   function onFabricChange(e) { selectedFabric = e.detail; dispatch('change', { field: 'fabric' }) }
   function onJavaChange(e)   { selectedJava   = e.detail; dispatch('change', { field: 'java' }) }
 </script>
 
 <div class="rows">
+  <div class="row">
+    <span class="row-label">Loader</span>
+    {#if locked}
+      <span class="val-locked">{loaderLabel}</span>
+    {:else}
+      <SteamSelect
+        bind:this={loaderSel}
+        value={loader}
+        options={loaderOptions}
+        {disabled}
+        on:change={onLoaderChange}
+      />
+    {/if}
+  </div>
+
   <div class="row">
     <span class="row-label">Minecraft</span>
     {#if locked}
@@ -77,15 +105,15 @@
         bind:this={mcSel}
         value={selectedMC}
         options={mcOptions}
-        disabled={mcVersions.length === 0}
+        disabled={disabled || mcVersions.length === 0}
         on:change={onMCChange}
       />
     {/if}
   </div>
 
-  {#if loader === 'fabric'}
+  {#if loader !== 'vanilla'}
     <div class="row">
-      <span class="row-label">Fabric</span>
+      <span class="row-label">{loaderVersionLabel}</span>
       {#if locked}
         <span class="val-locked">{selectedFabric || '—'}</span>
       {:else}
@@ -93,7 +121,7 @@
           bind:this={fabricSel}
           value={selectedFabric}
           options={fabricOptions}
-          disabled={fabricVersions.length === 0}
+          disabled={disabled || fabricVersions.length === 0}
           on:change={onFabricChange}
         />
       {/if}
@@ -109,7 +137,7 @@
         bind:this={javaSel}
         value={selectedJava}
         options={javaOptions}
-        disabled={javaOptions.length === 0}
+        disabled={disabled || javaOptions.length === 0}
         on:change={onJavaChange}
       />
     {/if}

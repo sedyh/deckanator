@@ -3,7 +3,7 @@
   import { EventsOn } from '../wailsjs/runtime/runtime.js'
   import {
     GetProfiles, CreateProfile, SaveProfile, DeleteProfile, GetIcons,
-    GetVanillaVersions, GetFabricLoaderVersions, GetFabricGameVersions,
+    GetVanillaVersions, GetLoaderVersions, GetLoaderGameVersions,
     IsInstalled, Install, Launch, CleanGameData, GetVersion
   } from '../wailsjs/go/internal/App.js'
 
@@ -26,24 +26,41 @@
   let versionSelRef
   let actionBtnRef
 
-  let panelIdx          = -1  // -1 = carousel, 0=new-profile, 1=mc, 2=fabric, 3=java, 4=run
+  let panelIdx          = -1  // -1 = carousel, 0=new-profile, 1=loader, 2=mc, 3=loader-version, 4=java, 5=run
   let lastFocus         = { mode: 'none', idx: -1 }  // { mode: 'action'|'panel'|'none', idx }
   let suppressBlur      = false
   let carouselActionIdx = 0
 
   let modsOpen = false
 
-  const loader = 'fabric'
+  const FABRIC_LIKE = ['fabric', 'quilt']
+
+  let loader              = 'vanilla'
   let mcVersions          = []
-  let fabricGameVersions  = new Set()
-  let fabricVersions      = []
+  let loaderGameSets      = {}  // loader -> Set of supported game versions
+  let fabricVersions      = []  // loader versions of the current fabric-like loader
   let selectedMC          = ''
-  let selectedFabric      = ''
+  let selectedFabric      = ''  // selected loader version
   let selectedJava        = ''
 
-  $: filteredMCVersions = fabricGameVersions.size > 0
-    ? mcVersions.filter(v => fabricGameVersions.has(v.id))
-    : mcVersions
+  $: isFabricLike = FABRIC_LIKE.includes(loader)
+
+  function filterMC(list, l, sets) {
+    const set = FABRIC_LIKE.includes(l) ? sets[l] : null
+    return set && set.size > 0 ? list.filter(v => set.has(v.id)) : list
+  }
+
+  $: filteredMCVersions = filterMC(mcVersions, loader, loaderGameSets)
+
+  async function ensureGameSet(l) {
+    if (!FABRIC_LIKE.includes(l) || loaderGameSets[l]) return
+    try {
+      const gv = await GetLoaderGameVersions(l)
+      loaderGameSets = { ...loaderGameSets, [l]: new Set(gv) }
+    } catch {
+      loaderGameSets = { ...loaderGameSets, [l]: new Set() }
+    }
+  }
 
   let appReady            = false
   let appVersion          = ''
@@ -74,10 +91,12 @@
   }
 
   async function syncProfile(p) {
-    const mc  = p.mcVersion           || filteredMCVersions[0]?.id  || ''
+    loader = p.loader || 'vanilla'
+    await ensureGameSet(loader)
+    const mc  = p.mcVersion           || filterMC(mcVersions, loader, loaderGameSets)[0]?.id || ''
     const fab = p.fabricLoaderVersion || ''
     selectedMC = mc
-    if (mc) await loadFabricVersions(mc, fab)
+    if (mc) await loadLoaderVersions(mc, fab)
     if (!installing && p.mcVersion) await checkInstalled()
   }
 
@@ -108,22 +127,25 @@
   async function loadVersions() {
     error = ''
     try {
-      const [allMC, fgv] = await Promise.all([GetVanillaVersions(), GetFabricGameVersions()])
-      mcVersions         = allMC
-      fabricGameVersions = new Set(fgv)
+      mcVersions = await GetVanillaVersions()
+      await ensureGameSet(loader)
 
       if (!selectedMC) {
-        const list = loader === 'fabric' ? allMC.filter(v => fabricGameVersions.has(v.id)) : allMC
-        selectedMC = list[0]?.id ?? ''
+        selectedMC = filterMC(mcVersions, loader, loaderGameSets)[0]?.id ?? ''
       }
 
-      if (loader === 'fabric') await loadFabricVersions(selectedMC)
+      if (isFabricLike) await loadLoaderVersions(selectedMC)
       await checkInstalled()
     } catch (e) { error = String(e) }
   }
 
-  async function loadFabricVersions(mcVersion, preferred = '') {
-    const versions = await GetFabricLoaderVersions(mcVersion)
+  async function loadLoaderVersions(mcVersion, preferred = '') {
+    if (!isFabricLike || !mcVersion) {
+      fabricVersions = []
+      selectedFabric = ''
+      return
+    }
+    const versions = await GetLoaderVersions(loader, mcVersion)
     const target = preferred && versions.find(v => v.version === preferred)
       ? preferred
       : versions[0]?.version ?? ''
@@ -139,7 +161,7 @@
       return
     }
     checkingInstall = true
-    installed = await IsInstalled(loader, selectedMC, loader === 'fabric' ? selectedFabric : '')
+    installed = await IsInstalled(loader, selectedMC, isFabricLike ? selectedFabric : '')
     if (profile) installedMap = { ...installedMap, [profile.id]: installed }
     checkingInstall = false
   }
@@ -154,8 +176,14 @@
   }
 
   async function onVersionChange(e) {
-    if (e?.detail?.field === 'mc' && loader === 'fabric') {
-      await loadFabricVersions(selectedMC)
+    const field = e?.detail?.field
+    if (field === 'loader') {
+      await ensureGameSet(loader)
+      const list = filterMC(mcVersions, loader, loaderGameSets)
+      if (!list.find(v => v.id === selectedMC)) selectedMC = list[0]?.id ?? ''
+      await loadLoaderVersions(selectedMC)
+    } else if (field === 'mc' && isFabricLike) {
+      await loadLoaderVersions(selectedMC)
     }
     await checkInstalled()
   }
@@ -166,7 +194,7 @@
       ...profile,
       loader,
       mcVersion: selectedMC,
-      fabricLoaderVersion: loader === 'fabric' ? selectedFabric : ''
+      fabricLoaderVersion: isFabricLike ? selectedFabric : ''
     }
     await SaveProfile(saved)
     profiles = profiles.map(p => p.id === saved.id ? saved : p)
@@ -178,7 +206,7 @@
     progress   = { stage: 'Preparing...', current: 0, total: 100 }
     savedProgress = progress
     try {
-      await Install(loader, selectedMC, loader === 'fabric' ? selectedFabric : '', selectedJava)
+      await Install(loader, selectedMC, isFabricLike ? selectedFabric : '', selectedJava)
       if (profile?.id === installId) installed = true
       await checkAllInstalled()
     } catch (e) {
@@ -200,7 +228,7 @@
       ...profile,
       loader,
       mcVersion: selectedMC,
-      fabricLoaderVersion: loader === 'fabric' ? selectedFabric : ''
+      fabricLoaderVersion: isFabricLike ? selectedFabric : ''
     })
     try { await Launch(profile.id) }
     catch (e) { error = String(e) }
@@ -225,7 +253,7 @@
       await CleanGameData()
       const mc = filteredMCVersions[0]?.id ?? ''
       selectedMC = mc
-      if (mc) await loadFabricVersions(mc)
+      if (mc) await loadLoaderVersions(mc)
     } else {
       _prevProfileId = ''
     }
@@ -238,7 +266,7 @@
 
   $: locked = installed || installing
 
-  $: focusableItems = buildFocusableItems(locked, loader)
+  $: focusableItems = buildFocusableItems(locked, loader, !!profile)
 
   $: inActionMode = carouselMode === 'action'
 
@@ -255,14 +283,18 @@
     }
   }
 
-  function buildFocusableItems(locked, loader) {
+  function buildFocusableItems(locked, loader, hasProfile) {
     const items = [{ idx: 0, focus: () => newProfileBtnEl?.focus() }]
+    // Without a profile the selectors and the action button are disabled
+    // (and unfocusable), so navigation only offers New Profile.
+    if (!hasProfile) return items
     if (!locked) {
-      items.push({ idx: 1, focus: () => versionSelRef?.focusMC() })
-      if (loader === 'fabric') items.push({ idx: 2, focus: () => versionSelRef?.focusFabric() })
-      items.push({ idx: 3, focus: () => versionSelRef?.focusJava() })
+      items.push({ idx: 1, focus: () => versionSelRef?.focusLoader() })
+      items.push({ idx: 2, focus: () => versionSelRef?.focusMC() })
+      if (FABRIC_LIKE.includes(loader)) items.push({ idx: 3, focus: () => versionSelRef?.focusFabric() })
+      items.push({ idx: 4, focus: () => versionSelRef?.focusJava() })
     }
-    items.push({ idx: 4, focus: () => actionBtnRef?.focus() })
+    items.push({ idx: 5, focus: () => actionBtnRef?.focus() })
     return items
   }
 
@@ -297,11 +329,12 @@
     if (newProfileBtnEl && newProfileBtnEl.contains(t)) idx = 0
     else if (versionSelRef) {
       const field = versionSelRef.fieldOfNode(t)
-      if (field === 'mc') idx = 1
-      else if (field === 'fabric') idx = 2
-      else if (field === 'java') idx = 3
+      if (field === 'loader') idx = 1
+      else if (field === 'mc') idx = 2
+      else if (field === 'fabric') idx = 3
+      else if (field === 'java') idx = 4
     }
-    if (idx === -1 && actionBtnRef?.containsNode(t)) idx = 4
+    if (idx === -1 && actionBtnRef?.containsNode(t)) idx = 5
     if (idx >= 0 && idx !== panelIdx) {
       panelIdx = idx
       lastFocus = { mode: 'panel', idx }
@@ -475,13 +508,14 @@
 
         <VersionSelector
           bind:this={versionSelRef}
-          {loader}
+          bind:loader
           mcVersions={filteredMCVersions}
           bind:selectedMC
           {fabricVersions}
           bind:selectedFabric
           bind:selectedJava
           locked={installed || installing}
+          disabled={!profile}
           on:change={onVersionChange}
         />
 
@@ -493,7 +527,7 @@
           {installing}
           {launching}
           {progress}
-          disabled={!profile || !selectedMC || (!!activeInstallId && !installing)}
+          disabled={!profile || !selectedMC || (isFabricLike && !selectedFabric) || (!!activeInstallId && !installing)}
           on:install={handleInstall}
           on:launch={handleLaunch}
         />

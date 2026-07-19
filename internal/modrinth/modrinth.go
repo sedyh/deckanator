@@ -223,7 +223,73 @@ func Install(profileID, projectID, title, description, projectType, iconURL, ver
 	if err := os.WriteFile(metaPath(profileID, projectID), data, 0o644); err != nil {
 		return err
 	}
+	if projectType == typeDatapack {
+		SyncWorldDatapacks(profileID)
+	}
 	return installDeps(profileID, versionID)
+}
+
+// SyncWorldDatapacks mirrors the profile's global datapacks folder into
+// every existing world. Minecraft only loads datapacks from a world's
+// own saves/<world>/datapacks directory — the profile-level folder is
+// invisible to the game, it's just our source of truth.
+func SyncWorldDatapacks(profileID string) {
+	src := filepath.Join(config.GameDir(), "profiles", profileID, "datapacks")
+	packs, err := os.ReadDir(src)
+	if err != nil || len(packs) == 0 {
+		return
+	}
+	savesDir := filepath.Join(config.GameDir(), "profiles", profileID, "saves")
+	worlds, err := os.ReadDir(savesDir)
+	if err != nil {
+		return
+	}
+	for _, w := range worlds {
+		if !w.IsDir() {
+			continue
+		}
+		dst := filepath.Join(savesDir, w.Name(), "datapacks")
+		if err := os.MkdirAll(dst, 0o755); err != nil {
+			continue
+		}
+		for _, p := range packs {
+			if p.IsDir() || !strings.HasSuffix(strings.ToLower(p.Name()), ".zip") {
+				continue
+			}
+			if err := copyIfDiffers(filepath.Join(src, p.Name()), filepath.Join(dst, p.Name())); err != nil {
+				log.Printf("[mods] datapack sync %s -> %s: %v", p.Name(), w.Name(), err)
+			}
+		}
+	}
+}
+
+func copyIfDiffers(src, dst string) error {
+	si, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	if di, err := os.Stat(dst); err == nil && di.Size() == si.Size() {
+		return nil
+	}
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dst, data, 0o644)
+}
+
+func removeFromWorlds(profileID, filename string) {
+	savesDir := filepath.Join(config.GameDir(), "profiles", profileID, "saves")
+	worlds, err := os.ReadDir(savesDir)
+	if err != nil {
+		return
+	}
+	for _, w := range worlds {
+		if !w.IsDir() {
+			continue
+		}
+		_ = os.Remove(filepath.Join(savesDir, w.Name(), "datapacks", filename))
+	}
 }
 
 func installDeps(profileID, versionID string) (e error) {
@@ -387,6 +453,9 @@ func Delete(profileID, projectID string) error {
 		if m.ProjectID == projectID {
 			dir := installDir(profileID, m.ProjectType, m.Filename)
 			_ = os.Remove(filepath.Join(dir, m.Filename))
+			if m.ProjectType == typeDatapack {
+				removeFromWorlds(profileID, m.Filename)
+			}
 			break
 		}
 	}

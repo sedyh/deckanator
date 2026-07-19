@@ -128,21 +128,21 @@ func Delete(id string) error {
 		return nil
 	}
 
-	mcUsed, fabricUsed := false, false
+	mcUsed, loaderUsed := false, false
 	for _, p := range remaining {
 		if p.MCVersion != deleted.MCVersion {
 			continue
 		}
 		mcUsed = true
-		if p.Loader == "fabric" && p.FabricLoaderVersion == deleted.FabricLoaderVersion {
-			fabricUsed = true
+		if p.Loader == deleted.Loader && p.FabricLoaderVersion == deleted.FabricLoaderVersion {
+			loaderUsed = true
 		}
 	}
 
 	dir := config.GameDir()
-	if deleted.Loader == "fabric" && deleted.FabricLoaderVersion != "" && !fabricUsed {
-		fabricID := FabricID(deleted.MCVersion, deleted.FabricLoaderVersion)
-		_ = os.RemoveAll(filepath.Join(dir, "versions", fabricID))
+	if deleted.Loader != "" && deleted.Loader != "vanilla" && deleted.FabricLoaderVersion != "" && !loaderUsed {
+		id := LoaderID(deleted.Loader, deleted.MCVersion, deleted.FabricLoaderVersion)
+		_ = os.RemoveAll(filepath.Join(dir, "versions", id))
 	}
 	if !mcUsed {
 		_ = os.RemoveAll(filepath.Join(dir, "versions", deleted.MCVersion))
@@ -169,9 +169,10 @@ func CleanGameData() error {
 	return os.RemoveAll(config.GameDir())
 }
 
-// FabricID returns the canonical Mojang-style version ID used by Fabric.
-func FabricID(mcVersion, loaderVersion string) string {
-	return fmt.Sprintf("fabric-loader-%s-%s", loaderVersion, mcVersion)
+// LoaderID returns the canonical Mojang-style version ID used by
+// fabric-like loaders ("fabric-loader-<v>-<mc>", "quilt-loader-<v>-<mc>").
+func LoaderID(loader, mcVersion, loaderVersion string) string {
+	return fmt.Sprintf("%s-loader-%s-%s", loader, loaderVersion, mcVersion)
 }
 
 func writeAll(profiles []Profile) error {

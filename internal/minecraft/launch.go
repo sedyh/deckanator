@@ -56,14 +56,14 @@ func Launch(p profile.Profile, opts LaunchOptions) error {
 	mainClass := vanilla.MainClass
 	var extraLibs []Library
 
-	if p.Loader == loaderFabric && p.FabricLoaderVersion != "" {
-		id := fabricProfileID(mcVersion, p.FabricLoaderVersion)
-		fabric, err := loadFabricProfileFile(filepath.Join(dir, "versions", id, id+".json"))
+	if IsFabricLike(p.Loader) && p.FabricLoaderVersion != "" {
+		id := loaderProfileID(p.Loader, mcVersion, p.FabricLoaderVersion)
+		prof, err := loadFabricProfileFile(filepath.Join(dir, "versions", id, id+".json"))
 		if err != nil {
-			return fmt.Errorf("fabric json: %w", err)
+			return fmt.Errorf("%s json: %w", p.Loader, err)
 		}
-		mainClass = fabric.MainClass
-		extraLibs = fabric.Libraries
+		mainClass = prof.MainClass
+		extraLibs = prof.Libraries
 	}
 
 	libDir := filepath.Join(dir, "libraries")

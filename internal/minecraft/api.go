@@ -2,16 +2,40 @@ package minecraft
 
 import (
 	"fmt"
+	"strings"
 
 	"deckanator/internal/request"
 )
 
-const (
-	manifestURL         = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json"
-	fabricLoadersByGame = "https://meta.fabricmc.net/v2/versions/loader/%s"
-	fabricGameURL       = "https://meta.fabricmc.net/v2/versions/game"
-	fabricProfileURL    = "https://meta.fabricmc.net/v2/versions/loader/%s/%s/profile/json"
-)
+const manifestURL = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json"
+
+// loaderEndpoints describes the meta API of a fabric-like loader (Quilt
+// deliberately mirrors Fabric's API and profile JSON format).
+type loaderEndpoints struct {
+	loadersByGame string
+	game          string
+	profile       string
+}
+
+var fabricLike = map[string]loaderEndpoints{
+	"fabric": {
+		loadersByGame: "https://meta.fabricmc.net/v2/versions/loader/%s",
+		game:          "https://meta.fabricmc.net/v2/versions/game",
+		profile:       "https://meta.fabricmc.net/v2/versions/loader/%s/%s/profile/json",
+	},
+	"quilt": {
+		loadersByGame: "https://meta.quiltmc.org/v3/versions/loader/%s",
+		game:          "https://meta.quiltmc.org/v3/versions/game",
+		profile:       "https://meta.quiltmc.org/v3/versions/loader/%s/%s/profile/json",
+	},
+}
+
+// IsFabricLike reports whether loader uses a Fabric-style meta API and
+// launch profile.
+func IsFabricLike(loader string) bool {
+	_, ok := fabricLike[loader]
+	return ok
+}
 
 // FetchVanillaVersions returns only "release" versions from Mojang's
 // manifest, preserving manifest order (newest first).
@@ -29,14 +53,18 @@ func FetchVanillaVersions() ([]VersionEntry, error) {
 	return releases, nil
 }
 
-// FetchFabricGameVersions returns stable game versions supported by
-// Fabric.
-func FetchFabricGameVersions() ([]string, error) {
+// FetchLoaderGameVersions returns stable game versions supported by the
+// given fabric-like loader.
+func FetchLoaderGameVersions(loader string) ([]string, error) {
+	ep, ok := fabricLike[loader]
+	if !ok {
+		return nil, fmt.Errorf("unsupported loader %q", loader)
+	}
 	var raw []struct {
 		Version string `json:"version"`
 		Stable  bool   `json:"stable"`
 	}
-	if err := request.JSON(fabricGameURL, &raw); err != nil {
+	if err := request.JSON(ep.game, &raw); err != nil {
 		return nil, err
 	}
 	out := make([]string, 0, len(raw))
@@ -48,20 +76,44 @@ func FetchFabricGameVersions() ([]string, error) {
 	return out, nil
 }
 
-// FetchFabricLoaderVersions returns loader versions available for
-// mcVersion.
-func FetchFabricLoaderVersions(mcVersion string) ([]FabricLoaderVersion, error) {
+// FetchLoaderVersions returns loader versions of the given fabric-like
+// loader available for mcVersion. Pre-release versions are dropped when
+// at least one stable version exists (Quilt's list is dominated by
+// betas and its meta has no stable flag, so filter by version string).
+func FetchLoaderVersions(loader, mcVersion string) ([]FabricLoaderVersion, error) {
+	ep, ok := fabricLike[loader]
+	if !ok {
+		return nil, fmt.Errorf("unsupported loader %q", loader)
+	}
 	var entries []struct {
 		Loader FabricLoaderVersion `json:"loader"`
 	}
-	if err := request.JSON(fmt.Sprintf(fabricLoadersByGame, mcVersion), &entries); err != nil {
+	if err := request.JSON(fmt.Sprintf(ep.loadersByGame, mcVersion), &entries); err != nil {
 		return nil, err
 	}
-	versions := make([]FabricLoaderVersion, len(entries))
+	all := make([]FabricLoaderVersion, len(entries))
 	for i, e := range entries {
-		versions[i] = e.Loader
+		all[i] = e.Loader
 	}
-	return versions, nil
+	stable := make([]FabricLoaderVersion, 0, len(all))
+	for _, v := range all {
+		if !isPrerelease(v.Version) {
+			stable = append(stable, v)
+		}
+	}
+	if len(stable) == 0 {
+		return all, nil
+	}
+	return stable, nil
+}
+
+func isPrerelease(version string) bool {
+	for _, marker := range []string{"-beta", "-pre", "-rc", "-alpha"} {
+		if strings.Contains(version, marker) {
+			return true
+		}
+	}
+	return false
 }
 
 func fetchManifest() (*VersionManifest, error) {
@@ -80,9 +132,13 @@ func fetchVersionDetails(url string) (*VersionDetails, error) {
 	return &d, nil
 }
 
-func fetchFabricProfile(mcVersion, loaderVersion string) (*FabricProfile, error) {
+func fetchLoaderProfile(loader, mcVersion, loaderVersion string) (*FabricProfile, error) {
+	ep, ok := fabricLike[loader]
+	if !ok {
+		return nil, fmt.Errorf("unsupported loader %q", loader)
+	}
 	var p FabricProfile
-	if err := request.JSON(fmt.Sprintf(fabricProfileURL, mcVersion, loaderVersion), &p); err != nil {
+	if err := request.JSON(fmt.Sprintf(ep.profile, mcVersion, loaderVersion), &p); err != nil {
 		return nil, err
 	}
 	return &p, nil

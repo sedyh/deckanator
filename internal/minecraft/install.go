@@ -13,14 +13,11 @@ import (
 	"deckanator/internal/maven"
 )
 
-const (
-	loaderFabric = "fabric"
-	ruleAllow    = "allow"
-)
+const ruleAllow = "allow"
 
-// IsInstalled reports whether the given (loader, mcVersion[, fabricVersion])
+// IsInstalled reports whether the given (loader, mcVersion[, loaderVersion])
 // combination is already present on disk.
-func IsInstalled(loader, mcVersion, fabricVersion string) bool {
+func IsInstalled(loader, mcVersion, loaderVersion string) bool {
 	dir := config.GameDir()
 	if _, err := os.Stat(filepath.Join(dir, "versions", mcVersion, mcVersion+".json")); err != nil {
 		return false
@@ -28,8 +25,8 @@ func IsInstalled(loader, mcVersion, fabricVersion string) bool {
 	if _, err := os.Stat(filepath.Join(dir, "versions", mcVersion, mcVersion+".jar")); err != nil {
 		return false
 	}
-	if loader == loaderFabric && fabricVersion != "" {
-		id := fabricProfileID(mcVersion, fabricVersion)
+	if IsFabricLike(loader) && loaderVersion != "" {
+		id := loaderProfileID(loader, mcVersion, loaderVersion)
 		if _, err := os.Stat(filepath.Join(dir, "versions", id, id+".json")); err != nil {
 			return false
 		}
@@ -125,10 +122,10 @@ func Install(
 		return fmt.Errorf("assets: %w", err)
 	}
 
-	if loader == loaderFabric && fabricVersion != "" {
-		progress("Installing Fabric", 90, 100)
-		if err := installFabric(ctx, dir, mcVersion, fabricVersion, libDir, progress); err != nil {
-			return fmt.Errorf("fabric: %w", err)
+	if IsFabricLike(loader) && fabricVersion != "" {
+		progress("Installing "+loader, 90, 100)
+		if err := installFabricLike(ctx, loader, dir, mcVersion, fabricVersion, libDir, progress); err != nil {
+			return fmt.Errorf("%s: %w", loader, err)
 		}
 	}
 
@@ -276,14 +273,14 @@ func extractAllNatives(libs []Library, libDir, nativesDir string) error {
 	return nil
 }
 
-func installFabric(_ context.Context, dir, mcVersion, loaderVersion, libDir string, progress ProgressFunc) error {
-	progress("Fetching Fabric profile", 93, 100)
-	prof, err := fetchFabricProfile(mcVersion, loaderVersion)
+func installFabricLike(_ context.Context, loader, dir, mcVersion, loaderVersion, libDir string, progress ProgressFunc) error {
+	progress("Fetching loader profile", 93, 100)
+	prof, err := fetchLoaderProfile(loader, mcVersion, loaderVersion)
 	if err != nil {
 		return err
 	}
 
-	id := fabricProfileID(mcVersion, loaderVersion)
+	id := loaderProfileID(loader, mcVersion, loaderVersion)
 	versionDir := filepath.Join(dir, "versions", id)
 	if err := os.MkdirAll(versionDir, 0o755); err != nil {
 		return err
@@ -294,7 +291,7 @@ func installFabric(_ context.Context, dir, mcVersion, loaderVersion, libDir stri
 		}
 	}
 
-	progress("Downloading Fabric libraries", 95, 100)
+	progress("Downloading loader libraries", 95, 100)
 	return downloadLibraries(prof.Libraries, libDir, 95, 99, progress)
 }
 
@@ -326,6 +323,8 @@ func shouldInclude(lib Library) bool {
 	return allowed
 }
 
-func fabricProfileID(mcVersion, loaderVersion string) string {
-	return fmt.Sprintf("fabric-loader-%s-%s", loaderVersion, mcVersion)
+// loaderProfileID returns the canonical launcher version ID used by
+// fabric-like loaders: "<loader>-loader-<loaderVersion>-<mcVersion>".
+func loaderProfileID(loader, mcVersion, loaderVersion string) string {
+	return fmt.Sprintf("%s-loader-%s-%s", loader, loaderVersion, mcVersion)
 }

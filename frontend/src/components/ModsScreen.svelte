@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy, tick } from 'svelte'
   import {
-    SearchMods, GetModVersions, InstallMod, DeleteMod, ListMods, FetchModInfo
+    SearchMods, GetModVersions, InstallMod, DeleteMod, ListMods, FetchModInfo, CountWorlds
   } from '../../wailsjs/go/internal/App.js'
   import SteamSelect from './SteamSelect.svelte'
   import { IconSearch, IconTrash, IconArrowLeft, IconDownload, IconBan } from '../lib/icons.js'
@@ -77,12 +77,16 @@
 
   $: versionOptions = modVersions.map(v => ({ value: v.id, label: v.version_number }))
 
-  $: rightZones = buildRightZones(selectedMod, versionOptions, mcInstalled)
+  // Vanilla runs no loader, so only datapacks make sense there.
+  $: modsAllowed = loader !== 'vanilla'
 
-  function buildRightZones(mod, versions, hasMC) {
+  $: rightZones = buildRightZones(selectedMod, versionOptions, mcInstalled, modsAllowed)
+
+  function buildRightZones(mod, versions, hasMC, allowMods) {
     const z = ['search']
     if (hasMC) z.push('f-installed')
-    z.push('f-mods', 'f-datapacks', 'sort', 'pager')
+    if (allowMods) z.push('f-mods')
+    z.push('f-datapacks', 'sort', 'pager')
     if (mod && versions.length > 0) z.push('version')
     z.push('install', 'back')
     return z
@@ -113,8 +117,14 @@
     }))
   }
 
+  let worldCount = -1  // -1 = unknown, hide world hints until loaded
+
   onMount(async () => {
-    console.log('[mods] mount profile:', profile?.id, 'mcVersion:', profile?.mcVersion, 'loader:', profile?.loader)
+    if (!modsAllowed) {
+      filterMods      = false
+      filterDatapacks = true
+    }
+    CountWorlds(profile.id).then(v => { worldCount = v }).catch(() => {})
     installedMods = await ListMods(profile.id)
     console.log('[mods] installedMods:', installedMods)
     fetchMissingInfo(installedMods)
@@ -561,6 +571,7 @@
           bind:this={fModsEl}
           class="toggle-row"
           class:zone-focused={focusZone === 'f-mods' && focusCol === 'right'}
+          disabled={!modsAllowed}
           on:click={() => { filterMods = !filterMods; doSearch(true) }}
           on:focus={() => { focusCol = 'right'; focusZone = 'f-mods' }}
           tabindex="-1"
@@ -630,11 +641,15 @@
         </div>
       </div>
 
-      <div class="spacer" />
-
-      {#if !mcInstalled}
-        <div class="mc-hint">Install Minecraft in this profile to add mods.</div>
-      {/if}
+      <div class="hint-slot">
+        {#if !mcInstalled}
+          <div class="mc-hint">Install Minecraft in this profile to add mods.</div>
+        {:else if worldCount === 0}
+          <div class="mc-hint">No worlds yet. Create one, then restart the game again to apply datapacks.</div>
+        {:else if worldCount > 0}
+          <div class="mc-hint">Datapacks apply to existing worlds only. Restart the game again to apply them to new ones.</div>
+        {/if}
+      </div>
 
       {#if installError}
         <div class="error-msg">{installError}</div>
@@ -763,7 +778,9 @@
     background: var(--card);
     cursor: pointer;
     transition: background var(--t);
-    min-height: 3.56rem;
+    /* Tall enough for name+description on the left and a three-row badge
+       stack (type, Installed, versions) on the right. */
+    min-height: 4.22rem;
     box-sizing: border-box;
     flex-shrink: 0;
   }
@@ -1025,17 +1042,28 @@
     user-select: none;
   }
 
-  .spacer { flex: 1; }
+  /* Flexible slot between the pager and the version row: takes all the
+     free height, centers the notice, and its size drives the notice's
+     font scaling via container query units. */
+  .hint-slot {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    container-type: size;
+  }
 
-  /* SteamOS-style notice: accent quote bar on a subtle accent tint. */
+  /* SteamOS-style notice: accent quote bar on a subtle accent tint.
+     Font shrinks with the slot when vertical space runs out. */
   .mc-hint {
     padding: 0.44rem 0.78rem;
-    margin-bottom: 0.44rem;
-    font-size: 0.67rem;
+    font-size: clamp(0.5rem, 15cqh, 0.67rem);
     line-height: 1.5;
     color: var(--text);
     background: rgba(30, 143, 255, 0.08);
     border-left: 3px solid var(--accent);
+    overflow: hidden;
     user-select: none;
   }
 
