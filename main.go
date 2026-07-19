@@ -22,7 +22,7 @@ func main() {
 	outfilter.Install()
 	fmt.Fprintf(os.Stderr, "Deckanator %s\n", version)
 
-	a := internal.New()
+	a := internal.New(version)
 
 	err := wails.Run(&options.App{
 		Title:  "Deckanator",

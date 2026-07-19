@@ -1,5 +1,11 @@
 version: '3'
 
+vars:
+  # Build identifier: short commit hash, falling back to the nearest tag,
+  # then "dev". CI release builds inject the tag name instead.
+  VERSION:
+    sh: git rev-parse --short HEAD 2>/dev/null || git describe --tags 2>/dev/null || echo dev
+
 tasks:
   build:mac:
     desc: Build for macOS
@@ -7,17 +13,24 @@ tasks:
       MACOSX_DEPLOYMENT_TARGET: '10.13'
       CGO_LDFLAGS: '-framework CoreFoundation -framework AppKit -framework UniformTypeIdentifiers'
     cmds:
-      - wails build -platform darwin/amd64
+      - wails build -platform darwin/amd64 -ldflags "-X main.version={{.VERSION}}"
+
+  run:mac:
+    desc: Rebuild and relaunch the macOS app
+    cmds:
+      - pkill -x Deckanator || true
+      - task: build:mac
+      - open build/bin/Deckanator.app
 
   build:linux:
     desc: Build for Linux / Steam Deck (amd64)
     cmds:
-      - wails build -platform linux/amd64
+      - wails build -platform linux/amd64 -ldflags "-X main.version={{.VERSION}}"
 
   build:windows:
     desc: Build for Windows (amd64)
     cmds:
-      - wails build -platform windows/amd64 -nsis
+      - wails build -platform windows/amd64 -nsis -ldflags "-X main.version={{.VERSION}}"
 
   build:all:
     desc: Build for all platforms

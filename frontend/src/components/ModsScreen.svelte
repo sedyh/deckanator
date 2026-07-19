@@ -8,6 +8,7 @@
   import { consumeKey } from '../lib/input.js'
 
   export let profile
+  export let mcInstalled = false
   export let onClose = () => {}
 
   const PAGE_SIZE = 20
@@ -73,10 +74,12 @@
 
   $: versionOptions = modVersions.map(v => ({ value: v.id, label: v.version_number }))
 
-  $: rightZones = buildRightZones(selectedMod, versionOptions)
+  $: rightZones = buildRightZones(selectedMod, versionOptions, mcInstalled)
 
-  function buildRightZones(mod, versions) {
-    const z = ['search', 'f-installed', 'f-mods', 'f-datapacks', 'sort', 'pager']
+  function buildRightZones(mod, versions, hasMC) {
+    const z = ['search']
+    if (hasMC) z.push('f-installed')
+    z.push('f-mods', 'f-datapacks', 'sort', 'pager')
     if (mod && versions.length > 0) z.push('version')
     z.push('install', 'back')
     return z
@@ -194,7 +197,7 @@
   }
 
   async function handleInstall() {
-    if (!selectedMod || !selectedVersionId || installing) return
+    if (!mcInstalled || !selectedMod || !selectedVersionId || installing) return
     const ver  = modVersions.find(v => v.id === selectedVersionId)
     if (!ver) return
     const file = ver.files.find(f => f.primary) ?? ver.files[0]
@@ -273,6 +276,13 @@
         return
       }
       e.stopPropagation()
+      return
+    }
+
+    // M / gamepad Y toggles the mods screen closed, mirroring how it opens.
+    if (e.code === 'KeyM' || e.key === 'm' || e.key === 'M' || e.key === 'ь' || e.key === 'Ь') {
+      e.preventDefault(); e.stopPropagation()
+      onClose()
       return
     }
 
@@ -411,6 +421,30 @@
     return title.split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('')
   }
 
+  // Newest three release game versions of a search hit, newest rightmost.
+  // Snapshots and pre-releases are filtered out. Modrinth orders the list
+  // by when support was added, not by version, so sort numerically.
+  function recentVersions(mod) {
+    const releases = (mod.versions ?? []).filter(v => /^\d+\.\d+(\.\d+)?$/.test(v))
+    releases.sort((a, b) => {
+      const pa = a.split('.').map(Number)
+      const pb = b.split('.').map(Number)
+      return (pa[0] - pb[0]) || ((pa[1] ?? 0) - (pb[1] ?? 0)) || ((pa[2] ?? 0) - (pb[2] ?? 0))
+    })
+    return releases.slice(-3)
+  }
+
+  // Fixed palette indexed by the version's numeric value: the same game
+  // version carries the same colour on every row, and consecutive
+  // versions walk the palette in order so neighbours never collide.
+  const VER_HUES = [210, 150, 45, 285, 15, 190, 330, 90]
+
+  function verStyle(v) {
+    const [a = 0, b = 0, c = 0] = v.split('.').map(Number)
+    const hue = VER_HUES[(a * 10000 + b * 100 + c) % VER_HUES.length]
+    return `color: hsl(${hue}, 55%, 72%); background: hsla(${hue}, 55%, 55%, 0.15)`
+  }
+
   function iconBg(title) {
     const colors = ['#1a5c8a','#1a7a4a','#7a1a6a','#7a4a1a','#1a6a7a','#5a1a7a']
     let h = 0
@@ -460,6 +494,13 @@
                 {#if installed}
                   <span class="badge badge-ok">Installed</span>
                 {/if}
+                {#if recentVersions(mod).length > 0}
+                  <span class="mod-vers">
+                    {#each recentVersions(mod) as v}
+                      <span class="ver-badge" style={verStyle(v)}>{v}</span>
+                    {/each}
+                  </span>
+                {/if}
               </div>
             </div>
           {/each}
@@ -499,6 +540,7 @@
           bind:this={fInstalledEl}
           class="toggle-row"
           class:zone-focused={focusZone === 'f-installed' && focusCol === 'right'}
+          disabled={!mcInstalled}
           on:click={() => { filterInstalled = !filterInstalled; page = 0 }}
           on:focus={() => { focusCol = 'right'; focusZone = 'f-installed' }}
           tabindex="-1"
@@ -565,18 +607,30 @@
             disabled={page <= 0}
             on:click={goPrev}
             tabindex="-1"
-          >&#8249;</button>
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path d="M6.5 1L2.5 5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="square"/>
+            </svg>
+          </button>
           <span class="pg-info">{page + 1} / {totalPages}</span>
           <button
             class="pg-arrow"
             disabled={page + 1 >= totalPages}
             on:click={goNext}
             tabindex="-1"
-          >&#8250;</button>
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path d="M3.5 1l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="square"/>
+            </svg>
+          </button>
         </div>
       </div>
 
       <div class="spacer" />
+
+      {#if !mcInstalled}
+        <div class="mc-hint">Install Minecraft in this profile to add mods.</div>
+      {/if}
 
       {#if installError}
         <div class="error-msg">{installError}</div>
@@ -607,7 +661,7 @@
         class:install-btn={!(selectedMod && installedSet.has(selectedMod.project_id))}
         class:delete-btn={selectedMod && installedSet.has(selectedMod.project_id)}
         class:btn-focused={focusZone === 'install' && focusCol === 'right'}
-        disabled={!selectedMod || installing || (!installedSet.has(selectedMod?.project_id ?? '') && (!selectedVersionId || !versionsCompatible))}
+        disabled={!mcInstalled || !selectedMod || installing || (!installedSet.has(selectedMod?.project_id ?? '') && (!selectedVersionId || !versionsCompatible))}
         on:click={() => selectedMod && installedSet.has(selectedMod.project_id) ? handleDelete(selectedMod.project_id) : handleInstall()}
         on:focus={() => { focusCol = 'right'; focusZone = 'install' }}
         tabindex="-1"
@@ -665,11 +719,15 @@
     gap: 0;
   }
 
+  /* Grid with a shared badges track: every row's badge column is sized
+     by the widest one on the page (via subgrid), so type badges and
+     version chips line up across rows. */
   .mod-list {
     flex: 1;
     overflow-y: auto;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-content: start;
     gap: 0.11rem;
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,0.12) transparent;
@@ -681,7 +739,8 @@
   }
 
   .list-hint {
-    flex: 1;
+    grid-column: 1 / -1;
+    align-self: stretch;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -691,7 +750,9 @@
 
   /* Mod row */
   .mod-row {
-    display: flex;
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
     align-items: center;
     gap: 0.67rem;
     padding: 0.5rem 0.78rem;
@@ -759,14 +820,34 @@
     flex-direction: column;
     gap: 0.22rem;
     flex-shrink: 0;
-    align-items: flex-end;
+    /* Type badge stretches to match the versions row below it. */
+    align-items: stretch;
+  }
+
+  .mod-vers {
+    display: flex;
+    gap: 0.17rem;
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  /* Chips grow from their natural width to fill the shared column, so
+     the row spans the same width as the type badge above it. */
+  .ver-badge {
+    flex-grow: 1;
+    text-align: center;
+    padding: 0.11rem 0.28rem;
+    border-radius: 2px;
+    font-size: 0.5rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
   }
 
   .badge {
     font-size: 0.5rem;
     font-weight: 700;
     padding: 0.11rem 0;
-    width: 4.2rem;
+    min-width: 4.2rem;
     text-align: center;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -869,9 +950,10 @@
     transition: background var(--t), color var(--t), box-shadow var(--t);
     text-align: left;
   }
-  .toggle-row:hover,
+  .toggle-row:not(:disabled):hover,
   .toggle-row.zone-focused { background: var(--card-btn-hover); color: var(--text); outline: none; }
   .toggle-row.zone-focused  { box-shadow: inset 0 0 0 2px var(--accent); }
+  .toggle-row:disabled { opacity: 0.4; cursor: default; }
 
   .checkbox {
     width: 0.83rem;
@@ -895,23 +977,30 @@
   }
 
   .pager {
+    position: relative;
     display: flex;
     align-items: center;
     background: var(--card);
     outline: none;
-    transition: box-shadow var(--t);
   }
-  .pager.zone-focused {
+  /* Focus ring drawn as an overlay so button hover backgrounds can't
+     paint over it. */
+  .pager::after {
+    content: '';
+    position: absolute;
+    inset: 0;
     box-shadow: inset 0 0 0 2px var(--accent);
+    opacity: 0;
+    transition: opacity var(--t);
+    pointer-events: none;
   }
+  .pager.zone-focused::after { opacity: 1; }
 
   .pg-arrow {
     width: 1.89rem;
     height: 1.89rem;
     background: transparent;
     color: var(--text-sub);
-    font-size: 1.11rem;
-    font-family: inherit;
     border: none;
     cursor: pointer;
     display: flex;
@@ -933,6 +1022,18 @@
   }
 
   .spacer { flex: 1; }
+
+  /* SteamOS-style notice: accent quote bar on a subtle accent tint. */
+  .mc-hint {
+    padding: 0.44rem 0.78rem;
+    margin-bottom: 0.44rem;
+    font-size: 0.67rem;
+    line-height: 1.5;
+    color: var(--text);
+    background: rgba(30, 143, 255, 0.08);
+    border-left: 3px solid var(--accent);
+    user-select: none;
+  }
 
   .error-msg {
     font-size: 0.67rem;

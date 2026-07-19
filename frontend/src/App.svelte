@@ -4,16 +4,17 @@
   import {
     GetProfiles, CreateProfile, SaveProfile, DeleteProfile, GetIcons,
     GetVanillaVersions, GetFabricLoaderVersions, GetFabricGameVersions,
-    IsInstalled, Install, Launch, CleanGameData
+    IsInstalled, Install, Launch, CleanGameData, GetVersion
   } from '../wailsjs/go/internal/App.js'
 
   import Carousel       from './components/Carousel.svelte'
   import VersionSelector from './components/VersionSelector.svelte'
   import ActionButton   from './components/ActionButton.svelte'
   import ModsScreen     from './components/ModsScreen.svelte'
+  import { fade } from 'svelte/transition'
   import { GlyphA, GlyphB, GlyphY, GlyphDPadH, GlyphDPadV, IconPlus } from './lib/icons.js'
   import { setupActions } from './lib/actions.js'
-  import { destroy as destroyInput, consumeKey } from './lib/input.js'
+  import { destroy as destroyInput, consumeKey, getInputMode, onInputModeChange } from './lib/input.js'
 
   let profiles        = []
   let icons           = []
@@ -45,6 +46,7 @@
     : mcVersions
 
   let appReady            = false
+  let appVersion          = ''
 
   let installed           = false
   let installing          = false
@@ -80,10 +82,15 @@
   }
 
   setupActions()
-  onDestroy(destroyInput)
+
+  let inputMode = getInputMode()
+  const unsubInputMode = onInputModeChange(m => { inputMode = m })
+  onDestroy(() => { unsubInputMode(); destroyInput() })
 
   onMount(async () => {
     EventsOn('install:progress', d => { progress = d; savedProgress = d })
+
+    GetVersion().then(v => { appVersion = v }).catch(() => {})
 
     icons    = await GetIcons()
     profiles = await GetProfiles()
@@ -311,6 +318,7 @@
 
     if (e.code === 'KeyM' || e.key === 'm' || e.key === 'M' || e.key === 'ь' || e.key === 'Ь') {
       if (profile && !modsOpen && carouselMode !== 'edit') {
+        e.preventDefault()
         modsOpen = true
         return
       }
@@ -396,6 +404,7 @@
     }
 
     if (e.key === 'Escape' && panelIdx >= 0) {
+      e.preventDefault()
       panelIdx = -1
       carouselRef?.focusCarousel()
     }
@@ -412,7 +421,7 @@
   </div>
 
   {#if modsOpen && profile}
-    <ModsScreen {profile} onClose={() => {
+    <ModsScreen {profile} mcInstalled={installed} onClose={() => {
       modsOpen = false
       tick().then(() => {
         if (lastFocus.mode === 'action') {
@@ -498,30 +507,69 @@
 
   <footer class="footer">
     <div class="hints-left">
-      <span class="hint">
-        <span class="glyph">{@html GlyphDPadH}</span>
-        <span>Profiles</span>
-      </span>
-      <span class="hint">
-        <span class="glyph">{@html GlyphDPadV}</span>
-        <span>Navigate</span>
-      </span>
+      {#if appVersion}
+        <span class="app-version">{appVersion}</span>
+      {/if}
+      <div class="hint-swap">
+        {#if inputMode !== 'touch'}
+          {#key inputMode}
+            <div class="hint-group" in:fade={{ duration: 180 }} out:fade={{ duration: 180 }}>
+              <span class="hint">
+                {#if inputMode === 'gamepad'}
+                  <span class="glyph">{@html GlyphDPadH}</span>
+                {:else}
+                  <span class="keycap">←</span><span class="keycap">→</span>
+                {/if}
+                <span>Profiles</span>
+              </span>
+              <span class="hint">
+                {#if inputMode === 'gamepad'}
+                  <span class="glyph">{@html GlyphDPadV}</span>
+                {:else}
+                  <span class="keycap">↑</span><span class="keycap">↓</span>
+                {/if}
+                <span>Navigate</span>
+              </span>
+            </div>
+          {/key}
+        {/if}
+      </div>
     </div>
     <div class="hints-right">
-      {#if profile && !modsOpen}
-        <span class="hint">
-          <span class="glyph">{@html GlyphY}</span>
-          <span>Mods</span>
-        </span>
-      {/if}
-      <span class="hint">
-        <span class="glyph">{@html GlyphA}</span>
-        <span>Select</span>
-      </span>
-      <span class="hint">
-        <span class="glyph">{@html GlyphB}</span>
-        <span>Back</span>
-      </span>
+      <div class="hint-swap swap-right">
+        {#if inputMode !== 'touch'}
+          {#key inputMode}
+            <div class="hint-group" in:fade={{ duration: 180 }} out:fade={{ duration: 180 }}>
+              {#if profile && !modsOpen}
+                <span class="hint">
+                  {#if inputMode === 'gamepad'}
+                    <span class="glyph">{@html GlyphY}</span>
+                  {:else}
+                    <span class="keycap">M</span>
+                  {/if}
+                  <span>Mods</span>
+                </span>
+              {/if}
+              <span class="hint">
+                {#if inputMode === 'gamepad'}
+                  <span class="glyph">{@html GlyphA}</span>
+                {:else}
+                  <span class="keycap">Enter</span>
+                {/if}
+                <span>Select</span>
+              </span>
+              <span class="hint">
+                {#if inputMode === 'gamepad'}
+                  <span class="glyph">{@html GlyphB}</span>
+                {:else}
+                  <span class="keycap">Esc</span>
+                {/if}
+                <span>Back</span>
+              </span>
+            </div>
+          {/key}
+        {/if}
+      </div>
     </div>
   </footer>
 </div>
@@ -673,7 +721,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 1.56rem;
+    padding: 0 0.62rem;
     height: 2.44rem;
     background: #161920;
     flex-shrink: 0;
@@ -693,6 +741,58 @@
     gap: 0.39rem;
     font-size: 0.67rem;
     color: var(--text-sub);
+  }
+
+  /* Crossfade container: outgoing and incoming hint groups share one
+     grid cell so they overlap during the transition and the bar never
+     looks empty or shifts layout. */
+  .hint-swap {
+    display: grid;
+    align-items: center;
+  }
+  .hint-swap > .hint-group {
+    grid-area: 1 / 1;
+    justify-self: start;
+  }
+  .hint-swap.swap-right > .hint-group {
+    justify-self: end;
+  }
+
+  .hint-group {
+    display: flex;
+    align-items: center;
+    gap: 1.11rem;
+  }
+
+  /* Filled white like the controller glyphs; label shows the footer
+     colour through, matching the cut-out letters of A/B/Y. */
+  .keycap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.2rem;
+    height: 1.2rem;
+    padding: 0 0.28rem;
+    background: #fff;
+    border-radius: 3px;
+    font-size: 0.61rem;
+    font-weight: 900;
+    color: #161920;
+    user-select: none;
+  }
+  .keycap + .keycap { margin-left: 0.17rem; }
+
+  /* Build badge styled after the SteamOS "STEAM" logo pill. */
+  .app-version {
+    padding: 0.22rem 0.61rem;
+    background: #fff;
+    border-radius: 999px;
+    font-size: 0.56rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #161920;
+    user-select: none;
   }
 
   .glyph {

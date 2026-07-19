@@ -71,6 +71,39 @@ let gamepadReadyAt = 0
 // (and blur clears state), so skip eviction entirely.
 const RELIABLE_KEYUPS = /Mac/i.test(navigator.platform || navigator.userAgent)
 
+// --- input mode ------------------------------------------------------------
+// Last physical input source: 'gamepad' | 'keyboard' | 'touch'. Keyboard
+// and mouse count as one mode. Steam Input mirrors gamepad presses as
+// keyboard events and touches as mouse events, so the "losing" source is
+// suppressed for a short window after the authoritative one fires.
+// The Linux build ships to Steam Deck (controller-first); desktop
+// macOS/Windows start as keyboard+mouse until proven otherwise.
+const DEFAULT_INPUT_MODE = /Linux/i.test(navigator.platform || navigator.userAgent)
+  ? 'gamepad'
+  : 'keyboard'
+let inputMode = DEFAULT_INPUT_MODE
+const modeListeners = new Set()
+let lastGamepadActivity = 0
+let lastTouchActivity = 0
+let modeMouseX = -1
+let modeMouseY = -1
+const MODE_SUPPRESS_MS = 800
+
+export function getInputMode() { return inputMode }
+
+export function onInputModeChange(cb) {
+  modeListeners.add(cb)
+  return () => modeListeners.delete(cb)
+}
+
+function setInputMode(mode) {
+  if (mode === inputMode) return
+  inputMode = mode
+  for (const cb of Array.from(modeListeners)) {
+    try { cb(mode) } catch (err) { console.error('[input] mode listener', err) }
+  }
+}
+
 export function registerAction(name, triggers, emitKey = null, opts = {}) {
   actionDefs.set(name, { triggers, emitKey, repeat: opts.repeat === true })
   actionState.set(name, {
@@ -304,10 +337,12 @@ function update() {
     pruneStale()
     if (windowFocused) {
       const now = performance.now()
+      let anyGamepad = false
       for (const [name, def] of actionDefs) {
         const s = actionState.get(name)
         const keyPressed = evalKeys(def)
         const { pressed: gpPressed, strength: gpStrength } = evalGamepad(def, s.sourceGamepad)
+        if (gpPressed) anyGamepad = true
         const pressed = keyPressed || gpPressed
         const strength = keyPressed ? 1 : gpStrength
         const prev = s.pressed
@@ -338,6 +373,10 @@ function update() {
           if (def.emitKey?.key) releaseConsumed(def.emitKey.key)
         }
       }
+      if (anyGamepad) {
+        lastGamepadActivity = now
+        setInputMode('gamepad')
+      }
     }
   } catch (err) {
     console.error('[input] update', err)
@@ -365,8 +404,17 @@ function keyMatchesAnyAction(e) {
 
 function onKeyDown(e) {
   if (!e.isTrusted) return
+  // Steam Input mirrors gamepad presses as keyboard events; don't let
+  // them flip the mode away from gamepad.
+  if (performance.now() - lastGamepadActivity > MODE_SUPPRESS_MS) {
+    setInputMode('keyboard')
+  }
   if (!keyMatchesAnyAction(e)) return
   if (isEditable(e.target)) return
+  // Escape and M have no useful default action outside editable fields;
+  // cancel them unconditionally so macOS never beeps for them, even when
+  // the press ends up doing nothing.
+  if (e.key === 'Escape' || e.code === 'KeyM') e.preventDefault()
   const now = performance.now()
   if (e.code) lastKeyActivity.set('code:' + e.code, now)
   if (e.key) lastKeyActivity.set('key:' + e.key, now)
@@ -407,6 +455,29 @@ function onWindowBlur() {
   lastAccepted.clear()
 }
 
+function onModeMouseMove(e) {
+  // WebKit synthesizes mousemove after scroll and touch taps emit compat
+  // mouse events: only physical movement (changed coordinates outside the
+  // touch suppression window) counts as mouse usage.
+  if (e.clientX === modeMouseX && e.clientY === modeMouseY) return
+  modeMouseX = e.clientX
+  modeMouseY = e.clientY
+  if (performance.now() - lastTouchActivity > MODE_SUPPRESS_MS) {
+    setInputMode('keyboard')
+  }
+}
+
+function onModeMouseDown() {
+  if (performance.now() - lastTouchActivity > MODE_SUPPRESS_MS) {
+    setInputMode('keyboard')
+  }
+}
+
+function onModeTouchStart() {
+  lastTouchActivity = performance.now()
+  setInputMode('touch')
+}
+
 function onGamepadConnected() {
   if (!gamepadReady) {
     gamepadReady = true
@@ -431,6 +502,10 @@ export function init() {
   window.addEventListener('blur', onWindowBlur)
   window.addEventListener('gamepadconnected', onGamepadConnected)
   window.addEventListener('gamepaddisconnected', onGamepadDisconnected)
+  window.addEventListener('mousemove', onModeMouseMove, { capture: true, passive: true })
+  window.addEventListener('mousedown', onModeMouseDown, { capture: true, passive: true })
+  window.addEventListener('wheel', onModeMouseDown, { capture: true, passive: true })
+  window.addEventListener('touchstart', onModeTouchStart, { capture: true, passive: true })
   rafHandle = requestAnimationFrame(update)
 }
 
@@ -443,6 +518,10 @@ export function destroy() {
   window.removeEventListener('blur', onWindowBlur)
   window.removeEventListener('gamepadconnected', onGamepadConnected)
   window.removeEventListener('gamepaddisconnected', onGamepadDisconnected)
+  window.removeEventListener('mousemove', onModeMouseMove, { capture: true })
+  window.removeEventListener('mousedown', onModeMouseDown, { capture: true })
+  window.removeEventListener('wheel', onModeMouseDown, { capture: true })
+  window.removeEventListener('touchstart', onModeTouchStart, { capture: true })
   if (rafHandle != null) { cancelAnimationFrame(rafHandle); rafHandle = null }
   for (const [, t] of consumed) clearTimeout(t)
   consumed.clear()
@@ -458,4 +537,10 @@ export function destroy() {
   lastKeyActivity.clear()
   gamepadReady = false
   windowFocused = true
+  inputMode = DEFAULT_INPUT_MODE
+  modeListeners.clear()
+  lastGamepadActivity = 0
+  lastTouchActivity = 0
+  modeMouseX = -1
+  modeMouseY = -1
 }

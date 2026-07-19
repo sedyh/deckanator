@@ -122,7 +122,7 @@
       return
     }
     if (!consumeKey(e)) { e.stopPropagation(); return }
-    if (e.key === 'Escape')    { e.stopPropagation(); closeDropdown() }
+    if (e.key === 'Escape')    { e.preventDefault(); e.stopPropagation(); closeDropdown() }
     if (e.key === 'ArrowDown') {
       e.preventDefault(); e.stopPropagation()
       highlightedIdx = Math.min(highlightedIdx + 1, options.length - 1)

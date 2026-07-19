@@ -34,6 +34,7 @@ type Result struct {
 	Downloads   int      `json:"downloads"`
 	ProjectType string   `json:"project_type"`
 	Categories  []string `json:"categories"`
+	Versions    []string `json:"versions"`
 }
 
 // SearchResponse is the decoded body of a /search request.

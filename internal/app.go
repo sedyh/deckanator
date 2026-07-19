@@ -25,14 +25,20 @@ import (
 // App is the type bound to the Wails frontend. Methods exported on *App
 // are callable from JavaScript.
 type App struct {
-	ctx context.Context
+	ctx     context.Context
+	version string
 }
 
-// New returns a zero-value App ready to be handed to Wails.
-func New() *App { return &App{} }
+// New returns an App ready to be handed to Wails. version is the build
+// identifier injected via -ldflags (tag on CI releases, short commit
+// hash on local builds, "dev" otherwise).
+func New(version string) *App { return &App{version: version} }
 
 // Startup captures the Wails context used for event emission.
 func (a *App) Startup(ctx context.Context) { a.ctx = ctx }
+
+// GetVersion returns the build identifier shown in the UI.
+func (a *App) GetVersion() string { return a.version }
 
 // GetProfiles returns all stored profiles.
 func (a *App) GetProfiles() []profile.Profile {
