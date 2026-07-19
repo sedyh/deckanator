@@ -8,6 +8,9 @@
   import { consumeKey } from '../lib/input.js'
 
   export let profile
+  // Effective loader of the app flow; profile.loader stays "vanilla"
+  // until the profile is installed, so it can't be used for filtering.
+  export let loader = 'fabric'
   export let mcInstalled = false
   export let onClose = () => {}
 
@@ -131,7 +134,7 @@
     const params = {
       query,
       mcVersion: profile.mcVersion ?? '',
-      loader:    profile.loader    ?? '',
+      loader,
       sortBy,
       offset:    page * PAGE_SIZE,
       filterMods,
@@ -178,7 +181,7 @@
         mod.project_id,
         profile.mcVersion ?? '',
         effectiveType,
-        profile.loader    ?? '',
+        loader,
       )
       if (pendingModId !== mod.project_id) return
       const mcVer = profile.mcVersion ?? ''
@@ -434,14 +437,15 @@
     return releases.slice(-3)
   }
 
-  // Fixed palette indexed by the version's numeric value: the same game
-  // version carries the same colour on every row, and consecutive
-  // versions walk the palette in order so neighbours never collide.
-  const VER_HUES = [210, 150, 45, 285, 15, 190, 330, 90]
+  // 16-hue palette indexed by the version components with coprime
+  // weights: the same game version carries the same colour on every
+  // row, while patch (+1) and minor (+13) steps land far apart on the
+  // wheel, so versions that appear together stay visually distinct.
+  const VER_HUES = [0, 22, 45, 67, 90, 112, 135, 157, 180, 202, 225, 247, 270, 292, 315, 337]
 
   function verStyle(v) {
     const [a = 0, b = 0, c = 0] = v.split('.').map(Number)
-    const hue = VER_HUES[(a * 10000 + b * 100 + c) % VER_HUES.length]
+    const hue = VER_HUES[(a * 7 + b * 13 + c) % VER_HUES.length]
     return `color: hsl(${hue}, 55%, 72%); background: hsla(${hue}, 55%, 55%, 0.15)`
   }
 

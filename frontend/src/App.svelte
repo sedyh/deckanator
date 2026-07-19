@@ -421,7 +421,7 @@
   </div>
 
   {#if modsOpen && profile}
-    <ModsScreen {profile} mcInstalled={installed} onClose={() => {
+    <ModsScreen {profile} {loader} mcInstalled={installed} onClose={() => {
       modsOpen = false
       tick().then(() => {
         if (lastFocus.mode === 'action') {
