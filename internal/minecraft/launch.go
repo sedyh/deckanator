@@ -112,6 +112,12 @@ func Launch(p profile.Profile, opts LaunchOptions) error {
 	}
 
 	jvmArgs, gameArgs := buildArgs(vanilla, vars)
+	if IsFabricLike(p.Loader) {
+		// Suppress the loader's own Swing error dialog so crashes surface
+		// only through our error panel. fabric.noGui covers Fabric;
+		// loader.gui.disabled covers Quilt.
+		jvmArgs = append(jvmArgs, "-Dfabric.noGui=true", "-Dloader.gui.disabled=true")
+	}
 	jvmArgs = append(jvmArgs, mainClass)
 	jvmArgs = append(jvmArgs, gameArgs...)
 

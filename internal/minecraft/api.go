@@ -108,16 +108,19 @@ func FetchLoaderVersions(loader, mcVersion string) ([]FabricLoaderVersion, error
 	sort.SliceStable(all, func(i, j int) bool {
 		return versionLess(all[j].Version, all[i].Version)
 	})
+	// Stable versions first (newest stable becomes the default pick),
+	// pre-releases after them: Quilt ships support for new game versions
+	// in betas, so hiding them entirely can leave no working loader.
 	stable := make([]FabricLoaderVersion, 0, len(all))
+	pre := make([]FabricLoaderVersion, 0, len(all))
 	for _, v := range all {
-		if !isPrerelease(v.Version) {
+		if isPrerelease(v.Version) {
+			pre = append(pre, v)
+		} else {
 			stable = append(stable, v)
 		}
 	}
-	if len(stable) == 0 {
-		return all, nil
-	}
-	return stable, nil
+	return append(stable, pre...), nil
 }
 
 func parseVersion(v string) ([]int, string) {

@@ -95,6 +95,10 @@
     [/GLFW|EGL error|OpenGL|libGL/i, 'Graphics initialization failed'],
   ]
 
+  // Exception classes that only wrap another failure: their name says
+  // nothing, so we skip them and fall back to a generic summary.
+  const OPAQUE_EXCEPTIONS = /^(FormattedException|RuntimeException|Exception|Error|Throwable|InvocationTargetException|CompletionException|ExecutionException)$/
+
   function rootCause(text) {
     const lines = text.split('\n')
     let cause = ''
@@ -103,7 +107,9 @@
       if (l.startsWith('at ')) continue
       const m = l.match(/^(?:Exception in thread "[^"]*" )?(Caused by: )?((?:[\w$]+\.)+([\w$]+(?:Exception|Error|Throwable)))(?::\s*(.*))?$/)
       if (!m) continue
-      const short = m[3] + (m[4] ? ': ' + m[4] : '')
+      // A bare opaque wrapper with no message carries no information.
+      if (OPAQUE_EXCEPTIONS.test(m[3]) && !m[4]) continue
+      const short = m[4] ? m[4] : m[3]
       if (m[1] || !cause) cause = short
     }
     return cause
@@ -111,17 +117,25 @@
 
   function summarizeError(text) {
     if (!text) return ''
-    const cause = rootCause(text)
     for (const [re, hint] of ERROR_HINTS) {
       if (re.test(text)) return hint
     }
+    const cause = rootCause(text)
     if (cause) return cause.length > 120 ? cause.slice(0, 117) + '…' : cause
-    return text.split('\n')[0]?.slice(0, 120) ?? 'Unknown error'
+    return 'Minecraft crashed'
   }
 
-  // Display copy: capitalized first letter (error strings are lowercase
-  // by Go convention).
-  $: errorDisplay = error ? error[0].toUpperCase() + error.slice(1) : ''
+  // Display copy: the near-universal "minecraft crashed (...)" prefix
+  // line is dropped (the summary above carries the message) and the
+  // first letter is capitalized (error strings are lowercase in Go).
+  function formatErrorText(text) {
+    if (!text) return ''
+    const stripped = text.replace(/^minecraft (crashed|exited|hung)[^\n]*\n+/i, '')
+    const s = stripped || text
+    return s[0].toUpperCase() + s.slice(1)
+  }
+
+  $: errorDisplay = formatErrorText(error)
 
   // Pin the trace to its end: the deepest "Caused by" is the root cause.
   // Guarded per error value: tick() inside a reactive block re-triggers
@@ -133,6 +147,30 @@
     tick().then(() => {
       if (errorBodyEl) errorBodyEl.scrollTop = errorBodyEl.scrollHeight
     })
+  }
+
+  // Keyboard/gamepad focus for the Copy bar: reached with ArrowRight
+  // from the settings panel while an error is shown.
+  let errorCopyEl
+  let errorFocused = false
+  $: if (!error && errorFocused) {
+    errorFocused = false
+    carouselRef?.focusCarousel()
+  }
+
+  // Shrinks the node's font until its content fits its box; re-runs on
+  // text change. Used by the error summary inside the fixed-height head.
+  function fitText(node, _text) {
+    const fit = () => {
+      node.style.fontSize = ''
+      let size = parseFloat(getComputedStyle(node).fontSize)
+      while (node.scrollHeight > node.clientHeight + 1 && size > 8) {
+        size -= 0.5
+        node.style.fontSize = size + 'px'
+      }
+    }
+    fit()
+    return { update: fit }
   }
 
   let errorCopied = false
@@ -150,25 +188,39 @@
   }
 
   // Online analysis via mclo.gs (stateless /analyse: the log is not
-  // stored or published server-side).
-  let analysis      = null
-  let analyzing     = false
-  let analysisError = ''
+  // stored or published server-side). Fired automatically on a new
+  // error with a 3s budget; findings silently enrich the panel, no
+  // findings or a failed request add nothing.
+  let analysis = null
+  let errorTimer = null
   let _prevErrorText = ''
   $: if (error !== _prevErrorText) {
     _prevErrorText = error
     analysis = null
-    analyzing = false
-    analysisError = ''
+    clearTimeout(errorTimer)
+    if (error) {
+      autoAnalyze(error)
+      // The panel dismisses itself after 30s (mirrored by the countdown
+      // strip on the Copy bar), landing focus on the action button.
+      errorTimer = setTimeout(dismissError, 30000)
+    }
   }
 
-  async function analyzeError() {
-    if (analyzing) return
-    analyzing = true
-    analysisError = ''
-    try { analysis = await AnalyzeCrash(profile?.id ?? '') }
-    catch (e) { analysis = null; analysisError = String(e) }
-    analyzing = false
+  function dismissError() {
+    errorFocused = false
+    error = ''
+    tick().then(() => {
+      const item = focusableItems.find(i => i.idx === 5)
+        ?? focusableItems[focusableItems.length - 1]
+      if (item) { panelIdx = item.idx; item.focus() }
+    })
+  }
+
+  async function autoAnalyze(forError) {
+    try {
+      const res = await AnalyzeCrash(profile?.id ?? '')
+      if (error === forError && res?.problems?.length > 0) analysis = res
+    } catch {}
   }
 
   $: profile = profiles[selectedIndex] ?? null
@@ -482,8 +534,43 @@
       if (e.key === 'Escape')    { e.preventDefault(); carouselRef?.actionCancel(); return }
     }
 
+    // Copy bar focus: Left/Escape return to the panel, Enter copies
+    // (explicitly, so gamepad A works and native Enter doesn't double).
+    if (errorFocused) {
+      if (e.key === 'ArrowLeft' || e.key === 'Escape') {
+        e.preventDefault()
+        const item = focusableItems.find(i => i.idx === lastFocus.idx)
+          ?? focusableItems[focusableItems.length - 1]
+        if (item) { panelIdx = item.idx; item.focus() }
+        return
+      }
+      if (e.key === 'Enter') { e.preventDefault(); copyError(); return }
+      if (e.key === 'ArrowRight') {
+        // Continuing right past the Copy bar dismisses the error panel
+        // and resumes carousel navigation.
+        e.preventDefault()
+        error = ''
+        carouselRef?.navigateRight(false)
+        return
+      }
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault()
+        return
+      }
+    }
+
+    // From the lower settings panel, Right moves into the error panel's
+    // Copy bar instead of scrolling the carousel.
+    if (e.key === 'ArrowRight' && error && panelIdx >= 0) {
+      e.preventDefault()
+      errorCopyEl?.focus()
+      return
+    }
+
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault()
+      // Navigating left out of the lower panel dismisses the error panel.
+      if (e.key === 'ArrowLeft' && error && panelIdx >= 0) error = ''
       const keepAction = lastFocus.mode === 'action' || inActionMode
       if (e.key === 'ArrowLeft') carouselRef?.navigateLeft(keepAction)
       else carouselRef?.navigateRight(keepAction)
@@ -642,31 +729,33 @@
       <div class="error-side" class:visible={!!error}>
         <div class="error-content">
           <div class="error-head">
-            <span class="error-summary">{summarizeError(errorDisplay)}</span>
-            <button class="error-copy" on:click={analyzeError} tabindex="-1" disabled={analyzing}>
-              {analyzing ? '…' : 'Analyze'}
-            </button>
-            <button class="error-copy" class:copied={errorCopied} on:click={copyError} tabindex="-1">
-              Copy
-            </button>
+            <span class="error-summary" use:fitText={errorDisplay}>{summarizeError(errorDisplay)}</span>
           </div>
-          {#if analysis || analysisError}
+          {#if analysis}
             <div class="error-analysis">
-              {#if analysisError}
-                <div class="an-none">Analysis failed: {analysisError}</div>
-              {:else if analysis.problems?.length > 0}
-                {#each analysis.problems as p}
-                  <div class="an-problem">{p.message}</div>
-                  {#each p.solutions ?? [] as s}
-                    <div class="an-solution">&bull; {s.message}</div>
-                  {/each}
+              {#each analysis.problems as p}
+                <div class="an-problem">{p.message}</div>
+                {#each p.solutions ?? [] as s}
+                  <div class="an-solution">&bull; {s.message}</div>
                 {/each}
-              {:else}
-                <div class="an-none">No known problems detected by mclo.gs</div>
-              {/if}
+              {/each}
             </div>
           {/if}
           <pre class="error-body" bind:this={errorBodyEl}>{errorDisplay}</pre>
+          <button
+            bind:this={errorCopyEl}
+            class="error-copy"
+            class:copied={errorCopied}
+            on:click={copyError}
+            on:focus={() => { errorFocused = true }}
+            on:blur={() => { errorFocused = false }}
+            tabindex="-1"
+          >
+            {#key error}
+              <span class="copy-timer" />
+            {/key}
+            <span class="copy-label">{errorCopied ? 'Copied' : 'Copy'}</span>
+          </button>
         </div>
       </div>
     </div>
@@ -808,51 +897,107 @@
     display: flex;
     flex-direction: column;
     background: rgba(215, 95, 95, 0.07);
-    border: 1px solid rgba(215, 95, 95, 0.4);
     opacity: 0;
     transform: translateX(0.5rem);
     transition: opacity 200ms ease 150ms, transform 200ms ease 150ms;
+  }
+  /* Panel border drawn as an overlay that stops above the Copy bar, so
+     the bar spans the full width with no red edges flanking it. */
+  .error-content::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 2.67rem 0;
+    pointer-events: none;
+    border: 1px solid rgba(215, 95, 95, 0.4);
+    border-bottom: none;
   }
   .error-side.visible .error-content {
     opacity: 1;
     transform: translateX(0);
   }
 
+  /* Matches the New Profile button's height across the row; the summary
+     font shrinks (fitText) instead of overflowing the fixed box. */
   .error-head {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
+    height: 1.9rem;
     gap: 0.44rem;
-    padding: 0.44rem 0.56rem;
+    padding: 0.22rem 0.78rem;
     border-bottom: 1px solid rgba(215, 95, 95, 0.25);
     flex-shrink: 0;
+    box-sizing: border-box;
   }
 
   .error-summary {
     flex: 1;
+    max-height: 100%;
+    overflow: hidden;
     font-size: 0.61rem;
     font-weight: 700;
-    line-height: 1.4;
+    line-height: 1.35;
     color: var(--red);
     word-break: break-word;
   }
 
+  /* Full-width action bar at the bottom of the error panel, sized like
+     the main action (Play/Install) button. The separator and the focus
+     ring are drawn on an ::after overlay so the countdown fill (a
+     positioned child) can't paint over them and thin the ring. */
   .error-copy {
+    position: relative;
     flex-shrink: 0;
-    padding: 0.17rem 0.44rem;
-    font-size: 0.56rem;
+    width: 100%;
+    height: 2.67rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-size: 0.83rem;
     font-weight: 700;
+    letter-spacing: 0.03em;
     color: var(--red);
     background: rgba(215, 95, 95, 0.15);
-    border-radius: 2px;
     cursor: pointer;
-    transition: background var(--t);
+    transition: background var(--t), color var(--t);
   }
-  .error-copy:hover:not(:disabled) { background: rgba(215, 95, 95, 0.3); }
-  .error-copy:disabled { opacity: 0.6; cursor: default; }
+  .error-copy::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    box-shadow: inset 0 1px 0 rgba(215, 95, 95, 0.25);
+  }
+  .error-copy:focus { outline: none; }
+  .error-copy:focus::after {
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
+
+  .copy-label { position: relative; }
+
+  /* Countdown fill mirroring the 30s auto-dismiss, drawn inside the
+     button behind the label like the install progress bar. */
+  .copy-timer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(215, 95, 95, 0.2);
+    animation: copy-countdown 30s linear forwards;
+    pointer-events: none;
+  }
+
+  @keyframes copy-countdown {
+    from { width: 100%; }
+    to   { width: 0; }
+  }
+  .error-copy:hover:not(.copied) { background: rgba(215, 95, 95, 0.3); }
   .error-copy.copied {
     color: #8be8a0;
     background: rgba(139, 232, 160, 0.15);
   }
+  .error-copy.copied .copy-timer { background: rgba(139, 232, 160, 0.2); }
 
   .error-analysis {
     flex-shrink: 0;
@@ -875,7 +1020,6 @@
     opacity: 0.9;
     word-break: break-word;
   }
-  .an-none { color: var(--text-sub); }
 
   .error-body {
     flex: 1;

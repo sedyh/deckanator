@@ -117,7 +117,11 @@ func Search(query, mcVersion, loader, sortBy string, offset int, showMods, showD
 		facetGroups = append(facetGroups, fmt.Sprintf(`["versions:%s"]`, mcVersion))
 	}
 	if showMods && !showDatapacks && loader != "" {
-		facetGroups = append(facetGroups, fmt.Sprintf(`["categories:%s"]`, loader))
+		items := make([]string, 0, 2)
+		for _, l := range compatibleLoaders(loader) {
+			items = append(items, fmt.Sprintf(`"categories:%s"`, l))
+		}
+		facetGroups = append(facetGroups, "["+strings.Join(items, ",")+"]")
 	}
 	if sortBy == "" {
 		if query != "" {
@@ -152,6 +156,23 @@ func Search(query, mcVersion, loader, sortBy string, offset int, showMods, showD
 	return raw, nil
 }
 
+// compatibleLoaders expands a loader to everything it can load: Quilt
+// runs Fabric mods, so quilt profiles search both ecosystems.
+func compatibleLoaders(loader string) []string {
+	if loader == "quilt" {
+		return []string{"quilt", "fabric"}
+	}
+	return []string{loader}
+}
+
+func loadersJSON(loader string) string {
+	quoted := make([]string, 0, 2)
+	for _, l := range compatibleLoaders(loader) {
+		quoted = append(quoted, fmt.Sprintf("%q", l))
+	}
+	return "[" + strings.Join(quoted, ",") + "]"
+}
+
 // Versions returns project versions matching the (mcVersion, loader)
 // filter, falling back to loader-only if nothing matches.
 func Versions(projectID, mcVersion, projectType, loader string) ([]Version, error) {
@@ -165,7 +186,7 @@ func Versions(projectID, mcVersion, projectType, loader string) ([]Version, erro
 		params.Set("game_versions", fmt.Sprintf(`["%s"]`, mcVersion))
 	}
 	if actualLoader != "" {
-		params.Set("loaders", fmt.Sprintf(`["%s"]`, actualLoader))
+		params.Set("loaders", loadersJSON(actualLoader))
 	}
 
 	vers, err := fetchVersions(projectID, params)
@@ -175,7 +196,7 @@ func Versions(projectID, mcVersion, projectType, loader string) ([]Version, erro
 	if len(vers) == 0 && mcVersion != "" {
 		fallback := url.Values{}
 		if actualLoader != "" {
-			fallback.Set("loaders", fmt.Sprintf(`["%s"]`, actualLoader))
+			fallback.Set("loaders", loadersJSON(actualLoader))
 		}
 		return fetchVersions(projectID, fallback)
 	}

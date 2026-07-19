@@ -644,10 +644,12 @@
       <div class="hint-slot">
         {#if !mcInstalled}
           <div class="mc-hint">Install Minecraft in this profile to add mods.</div>
-        {:else if worldCount === 0}
-          <div class="mc-hint">No worlds yet. Create one, then restart the game again to apply datapacks.</div>
-        {:else if worldCount > 0}
-          <div class="mc-hint">Datapacks apply to existing worlds only. Restart the game again to apply them to new ones.</div>
+        {:else if selectedMod?.categories?.includes('datapack')}
+          {#if worldCount === 0}
+            <div class="mc-hint">No worlds yet. Create one, then restart the game again to apply datapacks.</div>
+          {:else if worldCount > 0}
+            <div class="mc-hint">Datapacks apply to existing worlds only. Restart the game again to apply them to new ones.</div>
+          {/if}
         {/if}
       </div>
 

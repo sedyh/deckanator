@@ -134,16 +134,26 @@
     if (dx > 0 && selectedIndex > 0)                   { selectedIndex--; mode = 'nav' }
   }
 
-  let wheelLocked = false
+  // One gesture = one step. A fixed unlock timer lets macOS trackpad
+  // momentum (which can outlive any reasonable delay) trigger a second
+  // step; instead re-arm only when the wheel stream decays to noise or
+  // goes quiet, i.e. the physical gesture actually ended.
+  let wheelArmed = true
+  let wheelIdleTimer = null
 
   function handleWheel(e) {
     if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) return
-    if (Math.abs(e.deltaX) < 30) return
     if (document.querySelector('.wrap.open')) return
-    if (wheelLocked) return
+
+    clearTimeout(wheelIdleTimer)
+    wheelIdleTimer = setTimeout(() => { wheelArmed = true }, 150)
+
+    const mag = Math.abs(e.deltaX)
+    if (mag < 8) { wheelArmed = true; return }
+    if (mag < 30) return
     e.preventDefault()
-    wheelLocked = true
-    setTimeout(() => { wheelLocked = false }, 400)
+    if (!wheelArmed) return
+    wheelArmed = false
     if (e.deltaX > 0 && selectedIndex < profiles.length - 1) { selectedIndex++; mode = 'nav' }
     if (e.deltaX < 0 && selectedIndex > 0)                   { selectedIndex--; mode = 'nav' }
   }

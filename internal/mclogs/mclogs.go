@@ -9,11 +9,17 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sync"
+	"time"
 
 	"deckanator/internal/errs"
 )
 
 const analyseURL = "https://api.mclo.gs/1/analyse"
+
+// Analysis runs automatically right after a crash, so it must be fast
+// or silent: the whole request is bounded by this timeout.
+var client = &http.Client{Timeout: 3 * time.Second}
 
 // Solution is a suggested fix for a detected problem.
 type Solution struct {
@@ -39,17 +45,17 @@ type Analysis struct {
 	Information []Information `json:"information"`
 }
 
-// AnalyzeFiles analyzes each file and merges the results, deduplicating
-// problems by message and information by label. Unreadable files are
-// skipped; an API error is returned only if nothing was gathered.
+// AnalyzeFiles analyzes the files in parallel and merges the results,
+// deduplicating problems by message and information by label.
+// Unreadable files are skipped; an API error is returned only if
+// nothing was gathered.
 func AnalyzeFiles(paths []string) (Analysis, error) {
 	// API limit is 10 MiB / 25k lines; the tail is what matters.
 	const maxBytes = 1 << 20
-	var merged Analysis
-	seenProblems := map[string]bool{}
-	seenInfo := map[string]bool{}
-	var lastErr error
-	for _, path := range paths {
+	results := make([]Analysis, len(paths))
+	errors := make([]error, len(paths))
+	var wg sync.WaitGroup
+	for i, path := range paths {
 		data, err := os.ReadFile(path)
 		if err != nil {
 			continue
@@ -57,9 +63,21 @@ func AnalyzeFiles(paths []string) (Analysis, error) {
 		if len(data) > maxBytes {
 			data = data[len(data)-maxBytes:]
 		}
-		res, err := Analyze(string(data))
-		if err != nil {
-			lastErr = err
+		wg.Add(1)
+		go func(i int, content string) {
+			defer wg.Done()
+			results[i], errors[i] = Analyze(content)
+		}(i, string(data))
+	}
+	wg.Wait()
+
+	var merged Analysis
+	seenProblems := map[string]bool{}
+	seenInfo := map[string]bool{}
+	var lastErr error
+	for i, res := range results {
+		if errors[i] != nil {
+			lastErr = errors[i]
 			continue
 		}
 		for _, p := range res.Problems {
@@ -84,7 +102,7 @@ func AnalyzeFiles(paths []string) (Analysis, error) {
 // Analyze sends log content to mclo.gs and returns detected problems
 // with human-readable explanations and suggested solutions.
 func Analyze(content string) (_ Analysis, e error) {
-	resp, err := http.PostForm(analyseURL, url.Values{"content": {content}})
+	resp, err := client.PostForm(analyseURL, url.Values{"content": {content}})
 	if err != nil {
 		return Analysis{}, err
 	}
