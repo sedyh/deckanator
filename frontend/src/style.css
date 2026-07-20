@@ -53,7 +53,12 @@
 }
 
 html {
+  /* The layout is designed in rem against a 1280x800 viewport where
+     1rem = 24px (1.875vw = 3vh). Deriving the root size from the
+     viewport keeps every screen proportional when the window is smaller,
+     e.g. maximised under the KDE taskbar in Deck desktop mode. */
   font-size: 24px;
+  font-size: min(1.875vw, 3vh);
 }
 
 html, body, #app {

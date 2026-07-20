@@ -4,6 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -24,10 +25,19 @@ func main() {
 
 	a := internal.New(version)
 
+	// The Deck's screen is exactly 1280x800: in KDE desktop mode a window
+	// that size ends up behind the taskbar. Maximising instead lets the
+	// WM fit us to the work area; the UI scales itself to the viewport.
+	startState := options.Normal
+	if runtime.GOOS == "linux" {
+		startState = options.Maximised
+	}
+
 	err := wails.Run(&options.App{
-		Title:  "Deckanator",
-		Width:  1280,
-		Height: 800,
+		Title:            "Deckanator",
+		Width:            1280,
+		Height:           800,
+		WindowStartState: startState,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
