@@ -2,9 +2,7 @@
 
 The only controller-friendly Minecraft launcher for Steam Deck with modding support.
 
-<img width="1392" height="944" alt="Screenshot 2026-04-17 at 03 04 39" src="https://github.com/user-attachments/assets/377280c9-58be-4661-8984-56e327869f1e" />
-
-<img width="1392" height="951" alt="Screenshot 2026-04-17 at 02 54 03" src="https://github.com/user-attachments/assets/0e0c3537-f137-4289-a961-03d9085cfded" />
+![](https://github.com/user-attachments/assets/3d0af53b-c5db-4872-aade-265fac174198)
 
 ## Install on Steam Deck
 
