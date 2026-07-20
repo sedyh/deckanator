@@ -243,6 +243,15 @@ function isMaskedGamepad(pads, gp) {
   return false
 }
 
+// The Deck's controller reaches us as the raw Valve device (the Steam
+// Input copy is masked out), and its evdev report swaps X/Y relative to
+// the standard gamepad layout (the BTN_NORTH/BTN_WEST confusion), so
+// indices 2 and 3 are traded for Valve devices only.
+function padButtonIndex(gp, index) {
+  if ((index === 2 || index === 3) && isValveGamepad(gp)) return 5 - index
+  return index
+}
+
 function evalGamepad(def, wasPressed) {
   let pressed = false
   let strength = 0
@@ -256,7 +265,7 @@ function evalGamepad(def, wasPressed) {
 
     for (const t of def.triggers) {
       if (t.type === 'button') {
-        const b = gp.buttons && gp.buttons[t.index]
+        const b = gp.buttons && gp.buttons[padButtonIndex(gp, t.index)]
         if (b && b.pressed) {
           pressed = true
           if (b.value > strength) strength = b.value
