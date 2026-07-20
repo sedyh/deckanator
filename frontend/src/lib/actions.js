@@ -46,5 +46,10 @@ export function setupActions() {
     { type: 'button', index: 3 },
   ], { key: 'm', code: 'KeyM' })
 
+  registerAction('ui_settings', [
+    { type: 'key', code: 'KeyO' },
+    { type: 'button', index: 2 },
+  ], { key: 'o', code: 'KeyO' })
+
   init()
 }

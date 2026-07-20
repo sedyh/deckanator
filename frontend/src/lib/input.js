@@ -411,10 +411,10 @@ function onKeyDown(e) {
   }
   if (!keyMatchesAnyAction(e)) return
   if (isEditable(e.target)) return
-  // Escape and M have no useful default action outside editable fields;
-  // cancel them unconditionally so macOS never beeps for them, even when
-  // the press ends up doing nothing.
-  if (e.key === 'Escape' || e.code === 'KeyM') e.preventDefault()
+  // Escape, M and O have no useful default action outside editable
+  // fields; cancel them unconditionally so macOS never beeps for them,
+  // even when the press ends up doing nothing.
+  if (e.key === 'Escape' || e.code === 'KeyM' || e.code === 'KeyO') e.preventDefault()
   const now = performance.now()
   if (e.code) lastKeyActivity.set('code:' + e.code, now)
   if (e.key) lastKeyActivity.set('key:' + e.key, now)

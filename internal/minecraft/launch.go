@@ -31,6 +31,10 @@ type LaunchOptions struct {
 	// OnStarted is called with the game process right after it starts,
 	// letting the caller expose a kill switch for hung games.
 	OnStarted func(p *os.Process)
+	// DetachAfter, when positive, makes Launch return nil once the game
+	// has survived that long: the game keeps running on its own and the
+	// caller may quit the launcher. Zero waits for the game to exit.
+	DetachAfter time.Duration
 }
 
 // Launch starts Minecraft for the given profile. It blocks up to 5s to
@@ -145,8 +149,15 @@ func Launch(p profile.Profile, opts LaunchOptions) error {
 	// a startup window) must surface its trace instead of the launcher
 	// quitting itself while the game is still booting.
 	started := time.Now()
-	waitErr, hung := waitWithWatchdog(cmd, logPath)
+	hung, detached, waitErr := waitWithWatchdog(cmd, logPath, opts.DetachAfter)
 	ran := time.Since(started)
+	if detached {
+		// The game inherited its own descriptor for the log file.
+		if logFile != nil {
+			_ = logFile.Close()
+		}
+		return nil
+	}
 	if logFile != nil {
 		_ = logFile.Close()
 	}
@@ -314,8 +325,10 @@ func filterJVMArgs(args []string) []string {
 // window a booting game logs constantly, so a long silence there means
 // it hung (e.g. a loader stuck on an error it can't display): the
 // process is killed and hung=true is returned. After the window the
-// game is assumed interactive and quiet logs are normal.
-func waitWithWatchdog(cmd *exec.Cmd, logPath string) (waitErr error, hung bool) {
+// game is assumed interactive and quiet logs are normal. A positive
+// detachAfter instead returns detached=true once the game has survived
+// that long, leaving it running.
+func waitWithWatchdog(cmd *exec.Cmd, logPath string, detachAfter time.Duration) (hung, detached bool, waitErr error) {
 	const (
 		startupWindow = 5 * time.Minute
 		stallLimit    = 90 * time.Second
@@ -323,6 +336,13 @@ func waitWithWatchdog(cmd *exec.Cmd, logPath string) (waitErr error, hung bool) 
 	)
 	done := make(chan error, 1)
 	go func() { done <- cmd.Wait() }()
+
+	var detachC <-chan time.Time
+	if detachAfter > 0 {
+		t := time.NewTimer(detachAfter)
+		defer t.Stop()
+		detachC = t.C
+	}
 
 	deadline := time.Now().Add(startupWindow)
 	lastSize := int64(-1)
@@ -333,7 +353,9 @@ func waitWithWatchdog(cmd *exec.Cmd, logPath string) (waitErr error, hung bool) 
 	for {
 		select {
 		case err := <-done:
-			return err, false
+			return false, false, err
+		case <-detachC:
+			return false, true, nil
 		case <-ticker.C:
 			if time.Now().After(deadline) {
 				continue
@@ -345,7 +367,8 @@ func waitWithWatchdog(cmd *exec.Cmd, logPath string) (waitErr error, hung bool) 
 			}
 			if time.Since(lastGrowth) > stallLimit {
 				_ = cmd.Process.Kill()
-				return <-done, true
+				err := <-done
+				return true, false, err
 			}
 		}
 	}

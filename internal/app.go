@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"sort"
 	"sync"
+	"time"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
@@ -23,6 +24,7 @@ import (
 	"deckanator/internal/minecraft"
 	"deckanator/internal/modrinth"
 	"deckanator/internal/profile"
+	"deckanator/internal/settings"
 )
 
 // App is the type bound to the Wails frontend. Methods exported on *App
@@ -62,6 +64,12 @@ func (a *App) Startup(ctx context.Context) { a.ctx = ctx }
 
 // GetVersion returns the build identifier shown in the UI.
 func (a *App) GetVersion() string { return a.version }
+
+// GetSettings returns the persisted launcher settings.
+func (a *App) GetSettings() settings.Settings { return settings.Load() }
+
+// SaveSettings persists launcher settings.
+func (a *App) SaveSettings(s settings.Settings) error { return settings.Save(s) }
 
 // GetProfiles returns all stored profiles.
 func (a *App) GetProfiles() []profile.Profile {
@@ -286,24 +294,29 @@ func (a *App) Launch(profileID string) error {
 		// Worlds created since the last sync need the profile's datapacks
 		// copied in before the game starts.
 		modrinth.SyncDatapacks(profileID)
+		cfg := settings.Load()
+		var detach time.Duration
+		if cfg.CloseAfterLaunch {
+			detach = 15 * time.Second
+		}
 		if err := minecraft.Launch(p, minecraft.LaunchOptions{
 			EnsureJava: func(component string, pf minecraft.ProgressFunc) (string, error) {
 				return java.Ensure(component, java.ProgressFunc(pf))
 			},
-			OnStarted: a.setGameProc,
+			OnStarted:   a.setGameProc,
+			DetachAfter: detach,
 		}); err != nil {
 			a.setGameProc(nil)
 			return err
 		}
 		a.setGameProc(nil)
-		// Auto-quit after a clean game exit only on the Deck (Linux),
-		// where the launcher hands the Steam session over to the game.
-		// On macOS Quit from a binding deadlocks the main thread (the
-		// termination sequence waits for the in-flight binding, which is
-		// blocked inside Quit), freezing all input — and keeping the
-		// launcher open after the game closes is desirable there anyway.
-		if runtime.GOOS == "linux" {
-			go wailsruntime.Quit(a.ctx)
+		// Quit from a goroutine after the binding has returned: quitting
+		// while a binding is in flight deadlocks the macOS main thread.
+		if cfg.CloseAfterLaunch {
+			go func() {
+				time.Sleep(500 * time.Millisecond)
+				wailsruntime.Quit(a.ctx)
+			}()
 		}
 		return nil
 	}

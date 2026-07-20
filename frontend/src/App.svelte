@@ -5,15 +5,16 @@
     GetProfiles, CreateProfile, SaveProfile, DeleteProfile, GetIcons,
     GetVanillaVersions, GetLoaderVersions, GetLoaderGameVersions,
     IsInstalled, Install, Launch, CleanGameData, GetVersion, AnalyzeCrash,
-    InstalledLoaderVersion, GetLauncherLog, StopGame
+    InstalledLoaderVersion, GetLauncherLog, StopGame, GetSettings, SaveSettings
   } from '../wailsjs/go/internal/App.js'
 
   import Carousel       from './components/Carousel.svelte'
   import VersionSelector from './components/VersionSelector.svelte'
   import ActionButton   from './components/ActionButton.svelte'
   import ModsScreen     from './components/ModsScreen.svelte'
+  import SettingsPanel  from './components/SettingsPanel.svelte'
   import { fade } from 'svelte/transition'
-  import { GlyphA, GlyphB, GlyphY, GlyphDPadH, GlyphDPadV, IconPlus } from './lib/icons.js'
+  import { GlyphA, GlyphB, GlyphX, GlyphY, GlyphDPadH, GlyphDPadV, IconPlus } from './lib/icons.js'
   import { setupActions } from './lib/actions.js'
   import { destroy as destroyInput, consumeKey, getInputMode, onInputModeChange } from './lib/input.js'
 
@@ -33,6 +34,34 @@
   let carouselActionIdx = 0
 
   let modsOpen = false
+
+  // Settings panel: slides in from the right, dims the rest, and
+  // returns focus to wherever it was on close.
+  let settingsOpen   = false
+  let appSettings    = { closeAfterLaunch: true }
+  let settingsReturnEl = null
+
+  function openSettings() {
+    settingsReturnEl = document.activeElement
+    settingsOpen = true
+  }
+
+  function closeSettings() {
+    settingsOpen = false
+    tick().then(() => {
+      if (settingsReturnEl?.isConnected && settingsReturnEl !== document.body) {
+        settingsReturnEl.focus()
+      } else {
+        carouselRef?.focusCarousel()
+      }
+      settingsReturnEl = null
+    })
+  }
+
+  function onSettingsChange(e) {
+    appSettings = e.detail
+    SaveSettings(appSettings).catch(() => {})
+  }
 
   const FABRIC_LIKE = ['fabric', 'quilt']
 
@@ -261,6 +290,7 @@
     EventsOn('install:progress', d => { progress = d; savedProgress = d })
 
     GetVersion().then(v => { appVersion = v }).catch(() => {})
+    GetSettings().then(s => { appSettings = s }).catch(() => {})
 
     icons    = await GetIcons()
     profiles = await GetProfiles()
@@ -505,9 +535,18 @@
     // Ownership checks come first: consumeKey must only run when this
     // handler will actually route the event, otherwise it poisons the
     // debounce map for the handler that owns it.
+    if (settingsOpen) return
     if (modsOpen) return
     if (document.querySelector('.wrap.open')) return
     if (!consumeKey(e)) return
+
+    if (e.code === 'KeyO' || e.key === 'o' || e.key === 'O' || e.key === 'щ' || e.key === 'Щ') {
+      if (carouselMode !== 'edit') {
+        e.preventDefault()
+        openSettings()
+        return
+      }
+    }
 
     if (e.code === 'KeyM' || e.key === 'm' || e.key === 'M' || e.key === 'ь' || e.key === 'Ь') {
       if (profile && !modsOpen && carouselMode !== 'edit') {
@@ -647,6 +686,10 @@
       <circle cx="20" cy="20" r="16" />
     </svg>
   </div>
+
+  {#if settingsOpen}
+    <SettingsPanel settings={appSettings} on:change={onSettingsChange} on:close={closeSettings} />
+  {/if}
 
   {#if modsOpen && profile}
     <ModsScreen {profile} {loader} mcInstalled={installed} onClose={() => {
@@ -825,6 +868,18 @@
                 {/if}
                 <span>Back</span>
               </span>
+              <button
+                class="hint hint-btn"
+                on:click={() => settingsOpen ? closeSettings() : openSettings()}
+                tabindex="-1"
+              >
+                {#if inputMode === 'gamepad'}
+                  <span class="glyph">{@html GlyphX}</span>
+                {:else}
+                  <span class="keycap">O</span>
+                {/if}
+                <span>Settings</span>
+              </button>
             </div>
           {/key}
         {/if}
@@ -1136,6 +1191,14 @@
     font-size: 0.67rem;
     color: var(--text-sub);
   }
+
+  .hint-btn {
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    transition: color var(--t);
+  }
+  .hint-btn:hover { color: var(--text); }
 
   /* Crossfade container: outgoing and incoming hint groups share one
      grid cell so they overlap during the transition and the bar never
