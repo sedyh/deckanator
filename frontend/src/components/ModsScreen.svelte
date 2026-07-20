@@ -860,9 +860,11 @@
 </div>
 
 <style>
+  /* Stops above the footer so the nav bar stays visible with a
+     context-appropriate action list. */
   .mods-screen {
     position: absolute;
-    inset: 0;
+    inset: 0 0 2.44rem 0;
     background: var(--bg);
     display: flex;
     align-items: center;
@@ -874,7 +876,9 @@
     display: flex;
     gap: 1.5rem;
     width: min(54rem, calc(100vw - 2rem));
-    height: calc(100vh - 2rem);
+    /* Viewport minus outer padding minus the footer the screen no
+       longer covers. */
+    height: calc(100vh - 2rem - 2.44rem);
   }
 
   /* ── Left column ── */

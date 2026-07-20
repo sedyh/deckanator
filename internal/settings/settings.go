@@ -16,6 +16,13 @@ type Settings struct {
 	// open, waits for the game to exit and reports crashes whenever
 	// they happen.
 	CloseAfterLaunch bool `json:"closeAfterLaunch"`
+	// MemoryMinMB sets the initial JVM heap (-Xms); zero keeps the JVM
+	// default.
+	MemoryMinMB int `json:"memoryMinMb"`
+	// MemoryMaxMB caps the JVM heap (-Xmx); zero keeps the JVM default.
+	MemoryMaxMB int `json:"memoryMaxMb"`
+	// Fullscreen starts the game with --fullscreen.
+	Fullscreen bool `json:"fullscreen"`
 }
 
 func defaults() Settings {

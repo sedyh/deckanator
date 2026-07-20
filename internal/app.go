@@ -305,6 +305,9 @@ func (a *App) Launch(profileID string) error {
 			},
 			OnStarted:   a.setGameProc,
 			DetachAfter: detach,
+			MemoryMinMB: cfg.MemoryMinMB,
+			MemoryMaxMB: cfg.MemoryMaxMB,
+			Fullscreen:  cfg.Fullscreen,
 		}); err != nil {
 			a.setGameProc(nil)
 			return err

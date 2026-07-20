@@ -38,7 +38,7 @@
   // Settings panel: slides in from the right, dims the rest, and
   // returns focus to wherever it was on close.
   let settingsOpen   = false
-  let appSettings    = { closeAfterLaunch: true }
+  let appSettings    = { closeAfterLaunch: true, memoryMinMb: 0, memoryMaxMb: 0, fullscreen: false }
   let settingsReturnEl = null
 
   function openSettings() {
@@ -816,14 +816,16 @@
         {#if inputMode !== 'touch'}
           {#key inputMode}
             <div class="hint-group" in:fade={{ duration: 180 }} out:fade={{ duration: 180 }}>
-              <span class="hint">
-                {#if inputMode === 'gamepad'}
-                  <span class="glyph">{@html GlyphDPadH}</span>
-                {:else}
-                  <span class="keycap">←</span><span class="keycap">→</span>
-                {/if}
-                <span>Profiles</span>
-              </span>
+              {#if !settingsOpen && !modsOpen}
+                <span class="hint">
+                  {#if inputMode === 'gamepad'}
+                    <span class="glyph">{@html GlyphDPadH}</span>
+                  {:else}
+                    <span class="keycap">←</span><span class="keycap">→</span>
+                  {/if}
+                  <span>Profiles</span>
+                </span>
+              {/if}
               <span class="hint">
                 {#if inputMode === 'gamepad'}
                   <span class="glyph">{@html GlyphDPadV}</span>
@@ -842,7 +844,7 @@
         {#if inputMode !== 'touch'}
           {#key inputMode}
             <div class="hint-group" in:fade={{ duration: 180 }} out:fade={{ duration: 180 }}>
-              {#if profile && !modsOpen}
+              {#if profile && !settingsOpen && !modsOpen}
                 <span class="hint">
                   {#if inputMode === 'gamepad'}
                     <span class="glyph">{@html GlyphY}</span>
@@ -863,23 +865,27 @@
               <span class="hint">
                 {#if inputMode === 'gamepad'}
                   <span class="glyph">{@html GlyphB}</span>
+                  {#if modsOpen}<span class="hint-slash">/</span><span class="glyph">{@html GlyphY}</span>{/if}
                 {:else}
                   <span class="keycap">Esc</span>
+                  {#if modsOpen}<span class="hint-slash">/</span><span class="keycap">M</span>{/if}
                 {/if}
                 <span>Back</span>
               </span>
-              <button
-                class="hint hint-btn"
-                on:click={() => settingsOpen ? closeSettings() : openSettings()}
-                tabindex="-1"
-              >
-                {#if inputMode === 'gamepad'}
-                  <span class="glyph">{@html GlyphX}</span>
-                {:else}
-                  <span class="keycap">O</span>
-                {/if}
-                <span>Settings</span>
-              </button>
+              {#if !modsOpen}
+                <button
+                  class="hint hint-btn"
+                  on:click={() => settingsOpen ? closeSettings() : openSettings()}
+                  tabindex="-1"
+                >
+                  {#if inputMode === 'gamepad'}
+                    <span class="glyph">{@html GlyphX}</span>
+                  {:else}
+                    <span class="keycap">O</span>
+                  {/if}
+                  <span>Settings</span>
+                </button>
+              {/if}
             </div>
           {/key}
         {/if}
@@ -1199,6 +1205,12 @@
     transition: color var(--t);
   }
   .hint-btn:hover { color: var(--text); }
+
+  .hint-slash {
+    color: var(--text-sub);
+    opacity: 0.6;
+    margin: 0 -0.11rem;
+  }
 
   /* Crossfade container: outgoing and incoming hint groups share one
      grid cell so they overlap during the transition and the bar never

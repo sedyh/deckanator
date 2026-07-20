@@ -35,6 +35,13 @@ type LaunchOptions struct {
 	// has survived that long: the game keeps running on its own and the
 	// caller may quit the launcher. Zero waits for the game to exit.
 	DetachAfter time.Duration
+	// MemoryMinMB sets the initial JVM heap via -Xms; zero keeps the
+	// JVM default.
+	MemoryMinMB int
+	// MemoryMaxMB caps the JVM heap via -Xmx; zero keeps the JVM default.
+	MemoryMaxMB int
+	// Fullscreen starts the game with --fullscreen.
+	Fullscreen bool
 }
 
 // Launch starts Minecraft for the given profile. It blocks up to 5s to
@@ -115,21 +122,13 @@ func Launch(p profile.Profile, opts LaunchOptions) error {
 		"classpath":         classpath,
 	}
 
-	jvmArgs, gameArgs := buildArgs(vanilla, vars)
-	if IsFabricLike(p.Loader) {
-		// Suppress the loader's own Swing error dialog so crashes surface
-		// only through our error panel. fabric.noGui covers Fabric;
-		// loader.gui.disabled covers Quilt.
-		jvmArgs = append(jvmArgs, "-Dfabric.noGui=true", "-Dloader.gui.disabled=true")
-	}
-	jvmArgs = append(jvmArgs, mainClass)
-	jvmArgs = append(jvmArgs, gameArgs...)
+	args := assembleArgs(p.Loader, opts, vanilla, mainClass, vars)
 
 	logPath := filepath.Join(dir, "launcher.log")
 	logFile, _ := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 
 	var stderrBuf bytes.Buffer
-	cmd := exec.Command(java, jvmArgs...)
+	cmd := exec.Command(java, args...)
 	cmd.Dir = gameDir
 	if logFile != nil {
 		cmd.Stdout = logFile
@@ -189,6 +188,32 @@ func Launch(p profile.Profile, opts LaunchOptions) error {
 // offline play (Realms and account services always fail without a
 // Microsoft account); they must not be mistaken for a crash.
 var benignChainRe = regexp.MustCompile(`RealmsServiceException|InvalidCredentialsException|Realms authentication error|Failed to fetch user properties|Couldn't connect to realms|Failed to fetch Realms`)
+
+// assembleArgs builds the full java command line: manifest args plus
+// the launcher's own additions (heap cap, fullscreen, and suppression
+// of the fabric-like loaders' Swing error dialog so crashes surface
+// only through our error panel).
+func assembleArgs(loader string, opts LaunchOptions, vanilla *VersionDetails, mainClass string, vars map[string]string) []string {
+	jvmArgs, gameArgs := buildArgs(vanilla, vars)
+	minMB, maxMB := opts.MemoryMinMB, opts.MemoryMaxMB
+	if minMB > 0 && maxMB > 0 && minMB > maxMB {
+		minMB = maxMB
+	}
+	if minMB > 0 {
+		jvmArgs = append(jvmArgs, fmt.Sprintf("-Xms%dM", minMB))
+	}
+	if maxMB > 0 {
+		jvmArgs = append(jvmArgs, fmt.Sprintf("-Xmx%dM", maxMB))
+	}
+	if opts.Fullscreen {
+		gameArgs = append(gameArgs, "--fullscreen")
+	}
+	if IsFabricLike(loader) {
+		jvmArgs = append(jvmArgs, "-Dfabric.noGui=true", "-Dloader.gui.disabled=true")
+	}
+	jvmArgs = append(jvmArgs, mainClass)
+	return append(jvmArgs, gameArgs...)
+}
 
 func buildArgs(v *VersionDetails, vars map[string]string) (jvm, game []string) {
 	switch {
