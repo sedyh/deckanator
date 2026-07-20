@@ -119,7 +119,51 @@
     return r
   })
 
-  $: versionOptions = modVersions.map(v => ({ value: v.id, label: v.version_number }))
+  // Version labels are display-cleaned: per-segment "v"/"mc" prefixes
+  // and loader/type noise tokens (fabric/quilt/datapack/...) are
+  // stripped, "+" separators join with a dash, and the profile's game
+  // version is dropped as redundant (the list is already filtered to
+  // it) unless it's all that remains. If cleaning collides two versions
+  // into one label, the raw names are kept for both.
+  const VERSION_NOISE = /^(datapack|datapacks|data|resourcepack|resourcepacks|resource|fabric|quilt|forge|neoforge|mod|dp|rp)$/i
+
+  function cleanVersionLabel(raw, mcVersion, versionType) {
+    let s = raw.trim()
+    // Authors often encode the release type as a letter prefix (B0.6.2);
+    // strip it only when Modrinth's structured version_type confirms it,
+    // since the type is appended to the label explicitly below.
+    if (versionType === 'beta')  s = s.replace(/^b(?:eta)?[ .-]?(?=\d)/i, '')
+    if (versionType === 'alpha') s = s.replace(/^a(?:lpha)?[ .-]?(?=\d)/i, '')
+    const segs = []
+    for (const part of s.split('+')) {
+      for (let seg of part.split('-')) {
+        seg = seg.replace(/^v(?=\d)/i, '').replace(/^mc(?=\d)/i, '')
+        if (!seg || VERSION_NOISE.test(seg)) continue
+        segs.push(seg)
+      }
+    }
+    const isGameVer = x => x.replace(/^[a-z]+(?=\d)/i, '') === mcVersion
+    const withoutGame = segs.filter(x => !isGameVer(x))
+    const final = withoutGame.length > 0 ? withoutGame : segs
+    return final.join('-') || raw
+  }
+
+  $: versionOptions = (() => {
+    const mcVer = profile.mcVersion ?? ''
+    const opts = modVersions.map(v => ({
+      value: v.id,
+      label: cleanVersionLabel(v.version_number, mcVer, v.version_type),
+      raw: v.version_number,
+      tag: v.version_type === 'beta' || v.version_type === 'alpha' ? v.version_type : '',
+    }))
+    const counts = {}
+    for (const o of opts) counts[o.label] = (counts[o.label] ?? 0) + 1
+    return opts.map(o => ({
+      value: o.value,
+      label: counts[o.label] > 1 ? o.raw : o.label,
+      tag: o.tag,
+    }))
+  })()
 
   // Vanilla runs no loader, so only datapacks make sense there.
   $: modsAllowed = loader !== 'vanilla'
@@ -537,9 +581,17 @@
 
     <!-- Left column: mod list -->
     <div class="col-left">
-      <div class="mod-list" class:fading={listFading} bind:this={listEl}>
+      <div class="mod-list" class:fading={listFading} class:empty={displayList.length === 0} bind:this={listEl}>
         {#if displayList.length === 0}
-          <div class="list-hint">No results</div>
+          <div class="list-hint">
+            {#if listFading}
+              <svg class="list-spinner" viewBox="0 0 40 40" aria-hidden="true">
+                <circle cx="20" cy="20" r="16" />
+              </svg>
+            {:else}
+              No results
+            {/if}
+          </div>
         {:else}
           {#each displayList as mod, i}
             {@const installed = installedSet.has(mod.project_id)}
@@ -849,18 +901,45 @@
     transition: opacity 0.45s ease;
   }
   .mod-list.fading {
-    opacity: 0.12;
+    opacity: 0.45;
     pointer-events: none;
+  }
+  /* Keep the loading spinner fully visible while the list fades. */
+  .mod-list.fading.empty {
+    opacity: 1;
+  }
+
+  /* Empty state (no results / loading) centers in the list area. */
+  .mod-list.empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .list-hint {
-    grid-column: 1 / -1;
-    align-self: stretch;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--text-sub);
     font-size: 0.78rem;
+  }
+
+  /* Mini version of the launcher's startup spinner. */
+  .list-spinner {
+    width: 2rem;
+    height: 2rem;
+    animation: list-spin 1s linear infinite;
+  }
+  .list-spinner circle {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-dasharray: 60 40;
+  }
+
+  @keyframes list-spin {
+    to { transform: rotate(360deg); }
   }
 
   /* Mod row */

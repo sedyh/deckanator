@@ -37,7 +37,9 @@
     openUpward = rect.bottom + listHeight > window.innerHeight
   }
 
-  $: label = options.find(o => o.value === value)?.label ?? value
+  $: selectedOpt = options.find(o => o.value === value)
+  $: label = selectedOpt?.label ?? value
+  $: selectedTag = selectedOpt?.tag ?? ''
 
   function closeDropdown() {
     open = false
@@ -141,6 +143,8 @@
   }
 
   onDestroy(() => document.removeEventListener('click', handleOutside))
+  // Options may carry an optional `tag` (e.g. "beta") rendered as a
+  // small pill after the label, both in the list and on the trigger.
 </script>
 
 <div class="wrap" class:open class:disabled bind:this={triggerEl}>
@@ -151,7 +155,7 @@
     on:keydown={handleKeydown}
     on:focus
   >
-    <span class="val">{label || '—'}</span>
+    <span class="val">{label || '—'}{#if selectedTag}<span class="opt-tag opt-tag-{selectedTag}">{selectedTag}</span>{/if}</span>
     <span class="arrow" class:flip={open}>
       <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
         <path d="M1 3l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"/>
@@ -172,7 +176,7 @@
           on:mousemove={(e) => onItemMouseMove(e, i)}
           on:click|stopPropagation={() => select(opt.value)}
         >
-          {opt.label}
+          {opt.label}{#if opt.tag}<span class="opt-tag opt-tag-{opt.tag}">{opt.tag}</span>{/if}
         </button>
       {/each}
     </div>
@@ -202,6 +206,22 @@
   .trigger:hover { background: var(--card-btn-hover); font-weight: 700; }
   .trigger:focus { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
   .trigger:disabled { opacity: 0.35; cursor: default; }
+
+  .opt-tag {
+    display: inline-block;
+    margin-left: 0.39rem;
+    padding: 0.06rem 0.28rem;
+    border-radius: 2px;
+    font-size: 0.5rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    vertical-align: middle;
+  }
+  .opt-tag-beta  { color: #e8c98b; background: rgba(232, 201, 139, 0.15); }
+  .opt-tag-alpha { color: #e08b8b; background: rgba(224, 139, 139, 0.15); }
+  /* The trigger's larger type sits the pill a hair low; lift it. */
+  .val .opt-tag { transform: translateY(-0.09em); }
 
   .val {
     flex: 1;

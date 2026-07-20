@@ -150,7 +150,7 @@ func Launch(p profile.Profile, opts LaunchOptions) error {
 	if logFile != nil {
 		_ = logFile.Close()
 	}
-	tail, foundChain := extractLogTail(logPath)
+	tail, foundChain, chainAtEnd := extractLogTail(logPath)
 	if hung {
 		if tail != "" {
 			return fmt.Errorf("minecraft hung during startup and was stopped\n\n%s", tail)
@@ -164,13 +164,20 @@ func Launch(p profile.Profile, opts LaunchOptions) error {
 		return fmt.Errorf("minecraft crashed (%w) - log: %s", waitErr, logPath)
 	}
 	// Exit code 0 can still be a crash: a dead main thread winds the JVM
-	// down "cleanly" (Quilt's error path does exactly this). A short run
-	// that left an exception chain in the log is not a normal quit.
-	if foundChain && ran < 2*time.Minute {
+	// down "cleanly" (Quilt's error path does exactly this). But only a
+	// chain that terminates the log counts (a real crash is the last
+	// thing written), and background noise every offline session emits
+	// (Realms/auth failures) never does.
+	if foundChain && chainAtEnd && ran < 2*time.Minute && !benignChainRe.MatchString(tail) {
 		return fmt.Errorf("minecraft exited unexpectedly\n\n%s", tail)
 	}
 	return nil
 }
+
+// benignChainRe matches exception chains Minecraft logs during normal
+// offline play (Realms and account services always fail without a
+// Microsoft account); they must not be mistaken for a crash.
+var benignChainRe = regexp.MustCompile(`RealmsServiceException|InvalidCredentialsException|Realms authentication error|Failed to fetch user properties|Couldn't connect to realms|Failed to fetch Realms`)
 
 func buildArgs(v *VersionDetails, vars map[string]string) (jvm, game []string) {
 	switch {
@@ -358,18 +365,21 @@ func isHeaderLine(s string) bool {
 }
 
 // extractLogTail pulls the last exception chain out of the launcher
-// log. The boolean reports whether an actual exception chain was found
-// (as opposed to the generic last-lines fallback).
-func extractLogTail(logPath string) (string, bool) {
+// log. foundChain reports whether an actual exception chain was found
+// (as opposed to the generic last-lines fallback); atEnd reports
+// whether that chain effectively terminates the log — the mark of a
+// real crash rather than logged background noise.
+func extractLogTail(logPath string) (tail string, foundChain, atEnd bool) {
 	data, err := os.ReadFile(logPath)
 	if err != nil || len(data) == 0 {
-		return "", false
+		return "", false, false
 	}
 	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
 
 	// Walk up from the end over frame/header lines; the topmost header of
-	// that contiguous block starts the final exception chain.
-	end, topHeader := -1, -1
+	// that contiguous block starts the final exception chain. Meaningful
+	// lines skipped below the chain count as trailing output.
+	end, topHeader, trailing := -1, -1, 0
 	for i := len(lines) - 1; i >= 0; i-- {
 		t := strings.TrimSpace(lines[i])
 		if t == "" {
@@ -391,6 +401,8 @@ func extractLogTail(logPath string) (string, bool) {
 		default:
 			if end != -1 {
 				i = -1 // stop: left the exception block
+			} else {
+				trailing++
 			}
 		}
 		if end != -1 && i == -1 {
@@ -398,20 +410,20 @@ func extractLogTail(logPath string) (string, bool) {
 		}
 	}
 	if topHeader >= 0 && end >= topHeader {
-		return formatExceptionChain(lines[topHeader : end+1]), true
+		return formatExceptionChain(lines[topHeader : end+1]), true, trailing <= 3
 	}
 
 	// No exception chain: fall back to the last few meaningful lines.
-	tail := make([]string, 0, 5)
+	fb := make([]string, 0, 5)
 	for _, l := range lines {
 		if t := strings.TrimSpace(l); t != "" {
-			tail = append(tail, t)
+			fb = append(fb, t)
 		}
 	}
-	if len(tail) > 5 {
-		tail = tail[len(tail)-5:]
+	if len(fb) > 5 {
+		fb = fb[len(fb)-5:]
 	}
-	return strings.Join(tail, "\n"), false
+	return strings.Join(fb, "\n"), false, false
 }
 
 // formatExceptionChain re-indents a header+frames block. The full chain

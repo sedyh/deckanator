@@ -67,6 +67,7 @@ type Version struct {
 	ID            string       `json:"id"`
 	Name          string       `json:"name"`
 	VersionNumber string       `json:"version_number"`
+	VersionType   string       `json:"version_type"`
 	GameVersions  []string     `json:"game_versions"`
 	Loaders       []string     `json:"loaders"`
 	ProjectID     string       `json:"project_id"`
