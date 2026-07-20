@@ -231,6 +231,9 @@
     installing = activeInstallId === profile.id
     installed  = installing ? false : (installedMap[profile.id] ?? false)
     progress   = installing ? savedProgress : { stage: '', current: 0, total: 100 }
+    // A crash belongs to the profile it was launched from: switching
+    // profiles (keys, trackpad, touch or mouse) dismisses the panel.
+    error = ''
     syncProfile(profile)
   }
 

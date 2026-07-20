@@ -20,8 +20,11 @@ import (
 )
 
 const (
-	apiBase      = "https://api.modrinth.com/v2"
-	typeDatapack = "datapack"
+	apiBase          = "https://api.modrinth.com/v2"
+	typeDatapack     = "datapack"
+	typeResourcepack = "resourcepack"
+	loaderVanilla    = "vanilla"
+	extZip           = ".zip"
 )
 
 // Result is a search hit from /search.
@@ -55,6 +58,7 @@ type File struct {
 	URL      string            `json:"url"`
 	Filename string            `json:"filename"`
 	Primary  bool              `json:"primary"`
+	FileType string            `json:"file_type"`
 	Hashes   map[string]string `json:"hashes"`
 }
 
@@ -80,6 +84,9 @@ type Installed struct {
 	ProjectType string `json:"project_type,omitempty"`
 	IconURL     string `json:"icon_url,omitempty"`
 	Hash        string `json:"hash,omitempty"`
+	// Resource packs bundled with a datapack version
+	// (file_type "required-resource-pack" on Modrinth).
+	ResourcePacks []string `json:"resource_packs,omitempty"`
 }
 
 // Info is the subset of a Modrinth project returned to the UI.
@@ -101,9 +108,9 @@ func metaPath(profileID, projectID string) string {
 }
 
 // Search queries /search and returns hits plus a total count.
-func Search(query, mcVersion, loader, sortBy string, offset int, showMods, showDatapacks bool) (_ SearchResponse, e error) {
+func Search(query, mcVersion, loader, sortBy string, offset int, showMods, showDatapacks, showResourcepacks bool) (_ SearchResponse, e error) {
 	var facetGroups []string
-	if showMods || showDatapacks {
+	if showMods || showDatapacks || showResourcepacks {
 		var items []string
 		if showMods {
 			items = append(items, `"project_type:mod"`)
@@ -111,12 +118,15 @@ func Search(query, mcVersion, loader, sortBy string, offset int, showMods, showD
 		if showDatapacks {
 			items = append(items, `"project_type:datapack"`)
 		}
+		if showResourcepacks {
+			items = append(items, `"project_type:resourcepack"`)
+		}
 		facetGroups = append(facetGroups, "["+strings.Join(items, ",")+"]")
 	}
 	if mcVersion != "" {
 		facetGroups = append(facetGroups, fmt.Sprintf(`["versions:%s"]`, mcVersion))
 	}
-	if showMods && !showDatapacks && loader != "" {
+	if showMods && !showDatapacks && !showResourcepacks && loader != "" {
 		items := make([]string, 0, 2)
 		for _, l := range compatibleLoaders(loader) {
 			items = append(items, fmt.Sprintf(`"categories:%s"`, l))
@@ -177,8 +187,13 @@ func loadersJSON(loader string) string {
 // filter, falling back to loader-only if nothing matches.
 func Versions(projectID, mcVersion, projectType, loader string) ([]Version, error) {
 	actualLoader := loader
-	if projectType == typeDatapack {
+	switch projectType {
+	case typeDatapack:
 		actualLoader = typeDatapack
+	case typeResourcepack:
+		// Resource pack versions are tagged with the pseudo-loader
+		// "minecraft" on Modrinth.
+		actualLoader = "minecraft"
 	}
 
 	params := url.Values{}
@@ -218,8 +233,9 @@ func fetchVersions(projectID string, params url.Values) (_ []Version, e error) {
 
 // Install downloads the given file into the profile's mods/datapacks
 // directory and records a .meta entry. Required dependencies are
-// resolved recursively.
-func Install(profileID, projectID, title, description, projectType, iconURL, versionID, downloadURL, filename string) error {
+// resolved recursively. loader and mcVersion describe the profile and
+// drive the datapack manager auto-install.
+func Install(profileID, projectID, title, description, projectType, iconURL, versionID, downloadURL, filename, loader, mcVersion string) error {
 	dir := installDir(profileID, projectType, filename)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
@@ -240,21 +256,25 @@ func Install(profileID, projectID, title, description, projectType, iconURL, ver
 		IconURL:     iconURL,
 		Hash:        fileHash(filepath.Join(dir, filename)),
 	}
+	if projectType == typeDatapack {
+		meta.ResourcePacks = installBundledResourcePacks(profileID, versionID)
+	}
 	data, _ := json.Marshal(meta)
 	if err := os.WriteFile(metaPath(profileID, projectID), data, 0o644); err != nil {
 		return err
 	}
-	if projectType == typeDatapack {
-		SyncWorldDatapacks(profileID)
+	if projectType == typeDatapack || projectType == typeResourcepack {
+		ensureDatapackManager(profileID, loader, mcVersion)
+		SyncDatapacks(profileID)
 	}
 	return installDeps(profileID, versionID)
 }
 
-// SyncWorldDatapacks mirrors the profile's global datapacks folder into
+// syncWorldDatapacks mirrors the profile's global datapacks folder into
 // every existing world. Minecraft only loads datapacks from a world's
 // own saves/<world>/datapacks directory — the profile-level folder is
 // invisible to the game, it's just our source of truth.
-func SyncWorldDatapacks(profileID string) {
+func syncWorldDatapacks(profileID string) {
 	src := filepath.Join(config.GameDir(), "profiles", profileID, "datapacks")
 	packs, err := os.ReadDir(src)
 	if err != nil || len(packs) == 0 {
@@ -274,7 +294,7 @@ func SyncWorldDatapacks(profileID string) {
 			continue
 		}
 		for _, p := range packs {
-			if p.IsDir() || !strings.HasSuffix(strings.ToLower(p.Name()), ".zip") {
+			if p.IsDir() || !strings.HasSuffix(strings.ToLower(p.Name()), extZip) {
 				continue
 			}
 			if err := copyIfDiffers(filepath.Join(src, p.Name()), filepath.Join(dst, p.Name())); err != nil {
@@ -476,6 +496,13 @@ func Delete(profileID, projectID string) error {
 			_ = os.Remove(filepath.Join(dir, m.Filename))
 			if m.ProjectType == typeDatapack {
 				removeFromWorlds(profileID, m.Filename)
+				removeFromManagerDir(profileID, m.Filename)
+				for _, rp := range m.ResourcePacks {
+					removeResourcePack(profileID, rp)
+				}
+			}
+			if m.ProjectType == typeResourcepack {
+				removeResourcePack(profileID, m.Filename)
 			}
 			break
 		}
@@ -519,8 +546,11 @@ func List(profileID string) ([]Installed, error) {
 }
 
 func installDir(profileID, projectType, filename string) string {
-	if projectType == typeDatapack && strings.HasSuffix(strings.ToLower(filename), ".zip") {
+	if projectType == typeDatapack && strings.HasSuffix(strings.ToLower(filename), extZip) {
 		return filepath.Join(config.GameDir(), "profiles", profileID, "datapacks")
+	}
+	if projectType == typeResourcepack {
+		return resourcepacksDir(profileID)
 	}
 	return modsDir(profileID)
 }
@@ -572,7 +602,8 @@ func recoverOrphans(profileID string) {
 		exts []string
 	}{
 		{modsDir(profileID), []string{".jar"}},
-		{filepath.Join(config.GameDir(), "profiles", profileID, "datapacks"), []string{".zip"}},
+		{filepath.Join(config.GameDir(), "profiles", profileID, "datapacks"), []string{extZip}},
+		{resourcepacksDir(profileID), []string{extZip}},
 	}
 	for _, d := range dirs {
 		recoverOrphansFromDir(d.dir, d.exts, dirPath, trackedHashes, trackedFiles, known)
@@ -603,6 +634,9 @@ func buildTrackingMaps(dirPath string) (hashes, files, known map[string]bool) {
 		if m.Filename != "" {
 			files[m.Filename] = true
 		}
+		for _, rp := range m.ResourcePacks {
+			files[rp] = true
+		}
 		if m.ProjectID != "" {
 			known[m.ProjectID] = true
 		}
@@ -631,7 +665,7 @@ func recoverOrphansFromDir(dir string, exts []string, dirPath string, trackedHas
 		}
 
 		projectType := "mod"
-		if ext == ".zip" {
+		if ext == extZip {
 			projectType = typeDatapack
 		}
 

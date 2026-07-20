@@ -140,8 +140,8 @@ func (a *App) OpenProfileDir(profileID string) error {
 }
 
 // SearchMods proxies to the Modrinth search API.
-func (a *App) SearchMods(query, mcVersion, loader, sortBy string, offset int, showMods, showDatapacks bool) (modrinth.SearchResponse, error) {
-	return modrinth.Search(query, mcVersion, loader, sortBy, offset, showMods, showDatapacks)
+func (a *App) SearchMods(query, mcVersion, loader, sortBy string, offset int, showMods, showDatapacks, showResourcepacks bool) (modrinth.SearchResponse, error) {
+	return modrinth.Search(query, mcVersion, loader, sortBy, offset, showMods, showDatapacks, showResourcepacks)
 }
 
 // GetModVersions lists available Modrinth versions for a project.
@@ -150,8 +150,16 @@ func (a *App) GetModVersions(projectID, mcVersion, projectType, loader string) (
 }
 
 // InstallMod downloads and registers a mod (and its required deps).
-func (a *App) InstallMod(profileID, projectID, title, description, projectType, iconURL, versionID, downloadURL, filename string) error {
-	return modrinth.Install(profileID, projectID, title, description, projectType, iconURL, versionID, downloadURL, filename)
+// loader and mcVersion describe the profile so datapack installs can
+// pull in the datapack manager mod when one is available.
+func (a *App) InstallMod(profileID, projectID, title, description, projectType, iconURL, versionID, downloadURL, filename, loader, mcVersion string) error {
+	return modrinth.Install(profileID, projectID, title, description, projectType, iconURL, versionID, downloadURL, filename, loader, mcVersion)
+}
+
+// GetDatapackManagerStatus reports whether the datapack manager mod is
+// installed in the profile or available for its (loader, mcVersion).
+func (a *App) GetDatapackManagerStatus(profileID, loader, mcVersion string) modrinth.ManagerStatus {
+	return modrinth.DatapackManagerStatus(profileID, loader, mcVersion)
 }
 
 // GetLauncherLog returns the full launcher log, for copying complete
@@ -277,7 +285,7 @@ func (a *App) Launch(profileID string) error {
 		}
 		// Worlds created since the last sync need the profile's datapacks
 		// copied in before the game starts.
-		modrinth.SyncWorldDatapacks(profileID)
+		modrinth.SyncDatapacks(profileID)
 		if err := minecraft.Launch(p, minecraft.LaunchOptions{
 			EnsureJava: func(component string, pf minecraft.ProgressFunc) (string, error) {
 				return java.Ensure(component, java.ProgressFunc(pf))

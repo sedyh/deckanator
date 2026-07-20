@@ -1,7 +1,8 @@
 <script>
   import { onMount, onDestroy, tick } from 'svelte'
   import {
-    SearchMods, GetModVersions, InstallMod, DeleteMod, ListMods, FetchModInfo, CountWorlds
+    SearchMods, GetModVersions, InstallMod, DeleteMod, ListMods, FetchModInfo, CountWorlds,
+    GetDatapackManagerStatus
   } from '../../wailsjs/go/internal/App.js'
   import SteamSelect from './SteamSelect.svelte'
   import { IconSearch, IconTrash, IconArrowLeft, IconDownload, IconBan } from '../lib/icons.js'
@@ -21,6 +22,7 @@
   let filterInstalled  = false
   let filterMods       = true
   let filterDatapacks  = true
+  let filterResourcepacks = true
   let page          = 0
   let totalHits     = 0
 
@@ -52,6 +54,7 @@
   let fInstalledEl
   let fModsEl
   let fDatapacksEl
+  let fResourcepacksEl
 
   $: installedSet = new Set(installedMods.map(m => m.project_id))
 
@@ -71,9 +74,50 @@
   $: effectiveTotal = filterInstalled ? installedList.length : totalHits
   $: totalPages = Math.max(1, Math.ceil(effectiveTotal / PAGE_SIZE))
 
-  $: displayList = filterInstalled
+  // The selected version's files reveal a bundled resource pack before
+  // installation (search hits alone carry no file info).
+  $: selectedBundledRP = !!modVersions
+    .find(v => v.id === selectedVersionId)
+    ?.files?.some(f => f.file_type === 'required-resource-pack')
+
+  // Background bundle detection for the whole page: datapack hits get
+  // their newest matching version fetched (4 at a time, cached per
+  // project for the screen's lifetime) so "+ Resources" shows up in the
+  // list without selecting each item.
+  let bundleByProject = {}
+
+  function prefetchBundles(hits) {
+    const queue = hits.filter(h =>
+      h.categories?.includes('datapack') && bundleByProject[h.project_id] === undefined)
+    const worker = async () => {
+      while (queue.length > 0) {
+        const h = queue.shift()
+        let bundled = false
+        try {
+          const vers = await GetModVersions(h.project_id, profile.mcVersion ?? '', 'datapack', loader)
+          bundled = !!vers?.[0]?.files?.some(f => f.file_type === 'required-resource-pack')
+        } catch {}
+        bundleByProject = { ...bundleByProject, [h.project_id]: bundled }
+      }
+    }
+    Promise.all(Array.from({ length: 4 }, worker)).catch(() => {})
+  }
+
+  // Rows are enriched with the installed meta's bundled resource pack
+  // list (or the selected version's detection), so datapacks that ship
+  // textures carry a badge.
+  $: displayList = (filterInstalled
     ? installedList.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
     : results
+  ).map(r => {
+    const meta = installedMods.find(m => m.project_id === r.project_id)
+    if (meta?.resource_packs?.length) return { ...r, resource_packs: meta.resource_packs }
+    if (r.project_id === selectedMod?.project_id && selectedBundledRP) {
+      return { ...r, resource_packs: ['bundled'] }
+    }
+    if (bundleByProject[r.project_id]) return { ...r, resource_packs: ['bundled'] }
+    return r
+  })
 
   $: versionOptions = modVersions.map(v => ({ value: v.id, label: v.version_number }))
 
@@ -86,7 +130,7 @@
     const z = ['search']
     if (hasMC) z.push('f-installed')
     if (allowMods) z.push('f-mods')
-    z.push('f-datapacks', 'sort', 'pager')
+    z.push('f-datapacks', 'f-resourcepacks', 'sort', 'pager')
     if (mod && versions.length > 0) z.push('version')
     z.push('install', 'back')
     return z
@@ -119,12 +163,21 @@
 
   let worldCount = -1  // -1 = unknown, hide world hints until loaded
 
+  // Datapack manager mod (Global Packs) status for the hint slot.
+  let managerStatus = null
+  function refreshManagerStatus() {
+    GetDatapackManagerStatus(profile.id, loader, profile.mcVersion ?? '')
+      .then(s => { managerStatus = s })
+      .catch(() => {})
+  }
+
   onMount(async () => {
     if (!modsAllowed) {
       filterMods      = false
       filterDatapacks = true
     }
     CountWorlds(profile.id).then(v => { worldCount = v }).catch(() => {})
+    refreshManagerStatus()
     installedMods = await ListMods(profile.id)
     console.log('[mods] installedMods:', installedMods)
     fetchMissingInfo(installedMods)
@@ -149,6 +202,7 @@
       offset:    page * PAGE_SIZE,
       filterMods,
       filterDatapacks,
+      filterResourcepacks,
     }
     console.log('[mods] doSearch', params)
     try {
@@ -156,7 +210,7 @@
         SearchMods(
           params.query, params.mcVersion, params.loader,
           params.sortBy, params.offset,
-          params.filterMods, params.filterDatapacks,
+          params.filterMods, params.filterDatapacks, params.filterResourcepacks,
         ).catch(err => { console.error('[mods] SearchMods error:', err); return { hits: [], total_hits: 0 } }),
         new Promise(r => setTimeout(r, 500)),
       ])
@@ -164,6 +218,7 @@
       console.log('[mods] results:', res?.hits?.length, 'total:', res?.total_hits)
       results   = res.hits       ?? []
       totalHits = res.total_hits ?? 0
+      prefetchBundles(results)
       console.log('[mods] results set, length:', results.length, 'displayList will be:', results.length)
     } catch (err) {
       console.error('[mods] doSearch catch:', err)
@@ -186,7 +241,9 @@
     installError  = ''
     pendingModId  = mod.project_id
     try {
-      const effectiveType = mod.categories?.includes('datapack') ? 'datapack' : (mod.project_type ?? 'mod')
+      const effectiveType = mod.project_type === 'resourcepack'
+        ? 'resourcepack'
+        : mod.categories?.includes('datapack') ? 'datapack' : (mod.project_type ?? 'mod')
       const versions = await GetModVersions(
         mod.project_id,
         profile.mcVersion ?? '',
@@ -218,7 +275,9 @@
     installing   = true
     installError = ''
     try {
-      const effectiveType = selectedMod.categories?.includes('datapack') ? 'datapack' : (selectedMod.project_type ?? 'mod')
+      const effectiveType = selectedMod.project_type === 'resourcepack'
+        ? 'resourcepack'
+        : selectedMod.categories?.includes('datapack') ? 'datapack' : (selectedMod.project_type ?? 'mod')
       await InstallMod(
         profile.id,
         selectedMod.project_id,
@@ -229,8 +288,11 @@
         ver.id,
         file.url,
         file.filename,
+        loader,
+        profile.mcVersion ?? '',
       )
       installedMods = await ListMods(profile.id)
+      refreshManagerStatus()
     } catch (err) {
       installError = String(err)
     }
@@ -242,6 +304,7 @@
     try {
       await DeleteMod(profile.id, projectID)
       installedMods = await ListMods(profile.id)
+      refreshManagerStatus()
       if (selectedMod?.project_id === projectID) {
         selectedMod       = null
         modVersions       = []
@@ -405,6 +468,7 @@
       else if (zone === 'f-installed') fInstalledEl?.focus()
       else if (zone === 'f-mods')      fModsEl?.focus()
       else if (zone === 'f-datapacks') fDatapacksEl?.focus()
+      else if (zone === 'f-resourcepacks') fResourcepacksEl?.focus()
       else if (zone === 'sort')        sortSelRef?.focus()
       else if (zone === 'pager')       pagerEl?.focus()
       else if (zone === 'version')     versionSelRef?.focus()
@@ -417,6 +481,7 @@
     if      (zone === 'f-installed')  { filterInstalled = !filterInstalled; page = 0 }
     else if (zone === 'f-mods')       { filterMods      = !filterMods;      doSearch(true) }
     else if (zone === 'f-datapacks')  { filterDatapacks = !filterDatapacks; doSearch(true) }
+    else if (zone === 'f-resourcepacks') { filterResourcepacks = !filterResourcepacks; doSearch(true) }
     else if (zone === 'sort')         sortSelRef?.openMenu()
     else if (zone === 'pager')        goNext()
     else if (zone === 'install')      selectedMod && installedSet.has(selectedMod.project_id) ? handleDelete(selectedMod.project_id) : handleInstall()
@@ -500,8 +565,14 @@
                 {/if}
               </div>
               <div class="mod-badges">
-                {#if mod.categories?.includes('datapack')}
-                  <span class="badge badge-dp">Datapack</span>
+                {#if mod.project_type === 'resourcepack'}
+                  <span class="badge badge-rp">Resources</span>
+                {:else if mod.categories?.includes('datapack')}
+                  {#if mod.resource_packs?.length}
+                    <span class="badge badge-dp badge-mix"><span class="badge-mix-text">Datapack + Resources</span></span>
+                  {:else}
+                    <span class="badge badge-dp">Datapack</span>
+                  {/if}
                 {:else}
                   <span class="badge badge-mod">Mod</span>
                 {/if}
@@ -590,6 +661,17 @@
           <span class="checkbox" class:checked={filterDatapacks} />
           Datapacks
         </button>
+        <button
+          bind:this={fResourcepacksEl}
+          class="toggle-row"
+          class:zone-focused={focusZone === 'f-resourcepacks' && focusCol === 'right'}
+          on:click={() => { filterResourcepacks = !filterResourcepacks; doSearch(true) }}
+          on:focus={() => { focusCol = 'right'; focusZone = 'f-resourcepacks' }}
+          tabindex="-1"
+        >
+          <span class="checkbox" class:checked={filterResourcepacks} />
+          Resource packs
+        </button>
       </div>
 
       <!-- Sort -->
@@ -645,10 +727,22 @@
         {#if !mcInstalled}
           <div class="mc-hint">Install Minecraft in this profile to add mods.</div>
         {:else if selectedMod?.categories?.includes('datapack')}
-          {#if worldCount === 0}
+          {#if managerStatus?.installed}
+            <div class="mc-hint">Your datapacks are managed by {managerStatus.name}.</div>
+          {:else if managerStatus?.available}
+            <div class="mc-hint">Management mod available: {managerStatus.name}. It installs with your next datapack.</div>
+          {:else if worldCount === 0}
             <div class="mc-hint">No worlds yet. Create one, then restart the game again to apply datapacks.</div>
           {:else if worldCount > 0}
             <div class="mc-hint">Datapacks apply to existing worlds only. Restart the game again to apply them to new ones.</div>
+          {/if}
+        {:else if selectedMod?.project_type === 'resourcepack'}
+          {#if managerStatus?.installed}
+            <div class="mc-hint">Your resource packs are managed by {managerStatus.name}.</div>
+          {:else if managerStatus?.available}
+            <div class="mc-hint">Management mod available: {managerStatus.name}. It installs with your next pack.</div>
+          {:else}
+            <div class="mc-hint">Resource packs are enabled automatically for this profile.</div>
           {/if}
         {/if}
       </div>
@@ -869,9 +963,10 @@
   .badge {
     font-size: 0.5rem;
     font-weight: 700;
-    padding: 0.11rem 0;
+    padding: 0.11rem 0.56rem;
     min-width: 4.2rem;
     text-align: center;
+    box-sizing: border-box;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     white-space: nowrap;
@@ -879,6 +974,20 @@
 
   .badge-mod { color: #8bc4e8; background: rgba(139,196,232,0.15); }
   .badge-dp  { color: #8be8a0; background: rgba(139,232,160,0.15); }
+  .badge-rp  { color: #e8c98b; background: rgba(232,201,139,0.15); }
+
+  /* Combined datapack-with-textures badge: same metrics as the other
+     badges, with the pill and label blending green into amber. */
+  .badge-mix {
+    background: linear-gradient(90deg, rgba(139,232,160,0.15), rgba(232,201,139,0.18));
+  }
+  .badge-mix-text {
+    background: linear-gradient(90deg, #8be8a0 25%, #e8c98b 75%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
   .badge-ok  { color: var(--accent); background: rgba(30,143,255,0.15); }
 
   .del-btn {
@@ -898,12 +1007,14 @@
   .del-btn :global(svg) { width: 0.89rem; height: 0.89rem; }
 
   /* ── Right column ── */
+  /* Dense vertical rhythm: the column carries many controls and must
+     leave room for the hint slot on small (Deck) screens. */
   .col-right {
     width: 18rem;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.67rem;
+    gap: 0.44rem;
   }
 
   .search-row {
@@ -912,7 +1023,7 @@
     gap: 0.56rem;
     background: var(--card);
     padding: 0 0.78rem;
-    height: 2.44rem;
+    height: 2rem;
     flex-shrink: 0;
     transition: box-shadow var(--t);
   }
@@ -942,7 +1053,7 @@
   .section {
     display: flex;
     flex-direction: column;
-    gap: 0.22rem;
+    gap: 0.11rem;
     flex-shrink: 0;
   }
 
@@ -961,7 +1072,7 @@
     display: flex;
     align-items: center;
     gap: 0.56rem;
-    height: 1.89rem;
+    height: 1.56rem;
     padding: 0 0.78rem;
     background: var(--card);
     color: var(--text-sub);
@@ -1021,7 +1132,7 @@
 
   .pg-arrow {
     width: 1.89rem;
-    height: 1.89rem;
+    height: 1.56rem;
     background: transparent;
     color: var(--text-sub);
     border: none;
