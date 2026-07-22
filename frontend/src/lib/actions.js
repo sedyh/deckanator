@@ -46,9 +46,11 @@ export function setupActions() {
     { type: 'button', index: 3 },
   ], { key: 'm', code: 'KeyM' })
 
+  // Settings sits on Menu/Start, not X: Steam's default layouts bind X
+  // to the system "Show Keyboard" action, which the app cannot swallow.
   registerAction('ui_settings', [
     { type: 'key', code: 'KeyO' },
-    { type: 'button', index: 2 },
+    { type: 'button', index: 9 },
   ], { key: 'o', code: 'KeyO' })
 
   init()
