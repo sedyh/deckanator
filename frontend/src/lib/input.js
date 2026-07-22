@@ -91,6 +91,12 @@ const MODE_SUPPRESS_MS = 800
 
 export function getInputMode() { return inputMode }
 
+// While Steam's on-screen keyboard is up, gamescope double-routes its
+// trackpad pointers into the app as mouse moves; the lock keeps those
+// from flipping the mode away from gamepad (and unhiding the cursor).
+let modeLock = false
+export function setInputModeLock(v) { modeLock = v }
+
 export function onInputModeChange(cb) {
   modeListeners.add(cb)
   return () => modeListeners.delete(cb)
@@ -493,6 +499,7 @@ function onWindowBlur() {
 }
 
 function onModeMouseMove(e) {
+  if (modeLock) return
   // WebKit synthesizes mousemove after scroll and touch taps emit compat
   // mouse events: only physical movement (changed coordinates outside the
   // touch suppression window) counts as mouse usage.
@@ -505,6 +512,7 @@ function onModeMouseMove(e) {
 }
 
 function onModeMouseDown() {
+  if (modeLock) return
   if (performance.now() - lastTouchActivity > MODE_SUPPRESS_MS) {
     setInputMode('keyboard')
   }

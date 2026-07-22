@@ -6,7 +6,7 @@
   } from '../../wailsjs/go/internal/App.js'
   import SteamSelect from './SteamSelect.svelte'
   import { IconSearch, IconTrash, IconArrowLeft, IconDownload, IconBan } from '../lib/icons.js'
-  import { consumeKey, getInputMode } from '../lib/input.js'
+  import { consumeKey, getInputMode, setInputModeLock } from '../lib/input.js'
 
   export let profile
   // Effective loader of the app flow; profile.loader stays "vanilla"
@@ -390,6 +390,12 @@
   }
 
   function handleKey(e) {
+    // While Steam's keyboard is up, gamepad buttons arrive as our own
+    // synthetic keys and would act underneath it (A used to dismiss the
+    // keyboard by committing the search). Real typing from the OSK is
+    // trusted events; only B/Escape passes through as the explicit
+    // cancel, which also recovers if the OSK was closed by touch.
+    if (oskShown && !e.isTrusted && e.key !== 'Escape') return
     // An open dropdown owns the keys: don't consume them here or the
     // dropdown's own consumeKey would reject them as duplicates.
     if (document.querySelector('.wrap.open')) return
@@ -465,6 +471,10 @@
   function syncOsk(open) {
     if (open === oskShown) return
     oskShown = open
+    // gamescope double-routes the OSK's trackpad pointers into the app;
+    // locking the input mode keeps those moves from flipping us to
+    // keyboard mode (which would unhide the cursor mid-typing).
+    setInputModeLock(open)
     SetOnScreenKeyboard(open).catch(() => {})
   }
 
