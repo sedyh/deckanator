@@ -19,14 +19,41 @@
   // the row appears only when there is one.
   // Extra local states: working | done
   let upd = { ...getUpdateState(), stage: '', pct: -1 }
+  // A manual check resolves near-instantly, which reads as a broken
+  // button: "Checking..." is held on screen for a beat, then the
+  // "Up to date" confirmation lingers before turning back into the
+  // action label.
+  const CHECK_MIN_MS = 1000
+  const UPTODATE_MS = 5000
+  let justChecked = false
+  let justCheckedTimer
+  let checkStartedAt = 0
   const unsubUpd = onUpdateState(s => {
     // A shared re-check must not clobber an install in flight.
     if (upd.state === 'working' || upd.state === 'done') return
-    upd = { ...upd, ...s }
+    if (s.state === 'checking') {
+      checkStartedAt = performance.now()
+      upd = { ...upd, ...s }
+      return
+    }
+    const apply = () => {
+      if (upd.state === 'checking' && s.state === 'uptodate') {
+        justChecked = true
+        clearTimeout(justCheckedTimer)
+        justCheckedTimer = setTimeout(() => { justChecked = false }, UPTODATE_MS)
+      }
+      upd = { ...upd, ...s }
+    }
+    const elapsed = performance.now() - checkStartedAt
+    if (upd.state === 'checking' && elapsed < CHECK_MIN_MS) {
+      setTimeout(apply, CHECK_MIN_MS - elapsed)
+    } else {
+      apply()
+    }
   })
 
   async function updateAction() {
-    if (upd.state === 'error') { upd = { ...upd, state: 'checking' }; startUpdateCheck(); return }
+    if (upd.state === 'error' || upd.state === 'uptodate') { startUpdateCheck(); return }
     if (upd.state === 'done') { QuitLauncher(); return }
     if (upd.state !== 'available' || !upd.supported) return
     upd = { ...upd, state: 'working', stage: 'Preparing...', pct: -1 }
@@ -39,7 +66,8 @@
   }
 
   $: updStatus =
-    upd.state === 'uptodate'  ? 'Up to date' :
+    upd.state === 'checking'  ? 'Checking...' :
+    upd.state === 'uptodate'  ? (justChecked ? 'Up to date' : 'Check for updates') :
     upd.state === 'available' ? (upd.supported ? `Update to ${upd.latest}` : `New version ${upd.latest}`) :
     upd.state === 'working'   ? (upd.pct >= 0 ? `${upd.stage} ${upd.pct}%` : upd.stage) :
     upd.state === 'done'      ? 'Restart to finish' :
@@ -47,8 +75,8 @@
 
   $: updInteractive =
     (upd.state === 'available' && upd.supported) ||
-    ['done', 'error'].includes(upd.state)
-  $: updVisible = upd.state !== 'checking'
+    ['uptodate', 'done', 'error'].includes(upd.state)
+  $: updVisible = !!upd.resolved
 
   // Heap slider: index 0 is Auto (no flag passed, the JVM decides),
   // index 1 is an empty spacer position (no tick, skipped when moving)
@@ -233,27 +261,25 @@
 
   <div class="title about-title">About</div>
 
-  <div class="about-row">
-    <span class="row-text">Version</span>
-    <span class="about-val">{version || '...'}</span>
+  <div class="about-line">
+    <span class="version-pill">{version || '...'}</span>
+    {#if updVisible}
+      <button
+        bind:this={updEl}
+        class="update-btn upd-{upd.state}"
+        class:focused={els[idx] === updEl}
+        class:dim={!updInteractive}
+        on:click={updateAction}
+        on:focus={() => { idx = els.indexOf(updEl) }}
+        tabindex="-1"
+      >
+        {#if upd.state === 'working' && upd.pct >= 0}
+          <span class="upd-fill" style="width:{upd.pct}%" />
+        {/if}
+        <span class="upd-label">{updStatus}</span>
+      </button>
+    {/if}
   </div>
-
-  {#if updVisible}
-    <button
-      bind:this={updEl}
-      class="update-btn upd-{upd.state}"
-      class:focused={els[idx] === updEl}
-      class:dim={!updInteractive}
-      on:click={updateAction}
-      on:focus={() => { idx = els.indexOf(updEl) }}
-      tabindex="-1"
-    >
-      {#if upd.state === 'working' && upd.pct >= 0}
-        <span class="upd-fill" style="width:{upd.pct}%" />
-      {/if}
-      <span class="upd-label">{updStatus}</span>
-    </button>
-  {/if}
 
   <div class="spacer" />
 
@@ -308,19 +334,25 @@
 
   .about-title { margin-top: 0.44rem; }
 
-  /* Info-only line: not part of the focus order. */
-  .about-row {
+  /* One line: the version pill (same white badge as the main screen's
+     footer) with the update action filling the rest of the row. */
+  .about-line {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 0.56rem;
     min-height: 1.89rem;
-    padding: 0.33rem 0.78rem;
-    background: var(--card);
   }
 
-  .about-val {
-    font-size: 0.67rem;
-    color: var(--text-sub);
+  .version-pill {
+    padding: 0.22rem 0.61rem;
+    background: #fff;
+    border-radius: 999px;
+    font-size: 0.56rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #161920;
+    flex-shrink: 0;
   }
 
   /* Update button: sized like the setting rows, tinted by state;
@@ -328,10 +360,13 @@
   .update-btn {
     position: relative;
     overflow: hidden;
+    flex: 1;
+    min-width: 0;
     min-height: 1.89rem;
     padding: 0.33rem 0.78rem;
     background: var(--card-btn);
     color: var(--text);
+    font-size: 0.72rem;
     cursor: pointer;
     transition: background var(--t);
   }
@@ -345,7 +380,7 @@
 
   .update-btn.upd-available:not(.dim) { color: var(--accent); }
   .update-btn.upd-working { color: var(--accent); }
-  .update-btn.upd-done { color: var(--green); }
+  .update-btn.upd-done { color: var(--accent); }
   .update-btn.upd-error { color: var(--red); }
 
   .upd-fill {

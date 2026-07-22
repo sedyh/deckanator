@@ -1,11 +1,12 @@
 import { CheckUpdate } from '../../wailsjs/go/internal/App.js'
 
-// One shared update check per app run, started at boot: the settings
-// panel opens with the answer already cached instead of flashing
-// "Checking...". While unresolved the row simply isn't shown.
+// A shared update check, first run at boot: the settings panel opens
+// with the answer already cached instead of flashing "Checking...".
+// Until the first answer (`resolved`) the panel shows nothing; manual
+// re-checks keep the button visible in its checking state.
 // States: checking | uptodate | available | error. `supported` says
 // whether this build can install updates itself (the Linux flatpak).
-let state = { state: 'checking', latest: '', supported: false }
+let state = { state: 'checking', latest: '', supported: false, resolved: false }
 const listeners = new Set()
 
 export function getUpdateState() { return state }
@@ -23,11 +24,13 @@ function set(next) {
 }
 
 export function startUpdateCheck() {
+  set({ ...state, state: 'checking' })
   CheckUpdate().then(info => {
     set({
       state: info.available ? 'available' : 'uptodate',
       latest: info.version,
       supported: info.supported,
+      resolved: true,
     })
-  }).catch(() => set({ state: 'error', latest: '', supported: false }))
+  }).catch(() => set({ ...state, state: 'error', resolved: true }))
 }
