@@ -306,7 +306,10 @@
 
     GetVersion().then(v => { appVersion = v }).catch(() => {})
     startUpdateCheck()
-    IsDeckDesktop().then(v => { deckDesktop = v }).catch(() => {})
+    IsDeckDesktop().then(v => {
+      deckDesktop = v
+      console.log('[deck-notice] deckDesktop =', v)
+    }).catch(() => {})
     GetSettings().then(s => { appSettings = s }).catch(() => {})
 
     icons    = await GetIcons()

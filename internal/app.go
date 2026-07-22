@@ -109,6 +109,16 @@ func (a *App) IsDeckDesktop() bool {
 			}
 		}
 	}
+	for _, p := range []string{
+		"/sys/devices/virtual/dmi/id/board_vendor",
+		"/sys/class/dmi/id/board_vendor",
+	} {
+		if b, err := os.ReadFile(p); err == nil {
+			if strings.Contains(strings.TrimSpace(string(b)), "Valve") {
+				return true
+			}
+		}
+	}
 	return false
 }
 

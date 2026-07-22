@@ -120,6 +120,7 @@ export function onMirrorState(cb) {
 function setMirrorState(v) {
   if (v === mirrorState) return
   mirrorState = v
+  console.log('[mirror] state =', v)
   for (const cb of Array.from(mirrorListeners)) {
     try { cb(v) } catch (err) { console.error('[input] mirror listener', err) }
   }
@@ -127,6 +128,7 @@ function setMirrorState(v) {
 
 function probeMirror(now) {
   lastProbePressAt = now
+  console.log('[mirror] probe press, key delta =', Math.round(now - lastMirrorKeyAt))
   if (now - lastMirrorKeyAt < MIRROR_WINDOW_MS) {
     setMirrorState(true)
     return
@@ -494,6 +496,7 @@ function onKeyDown(e) {
   }
   if (MIRROR_KEYS.has(e.key)) {
     lastMirrorKeyAt = performance.now()
+    console.log('[mirror] key', JSON.stringify(e.key), 'press delta =', Math.round(lastMirrorKeyAt - lastProbePressAt))
     if (lastMirrorKeyAt - lastProbePressAt < MIRROR_WINDOW_MS) setMirrorState(true)
   }
   // Steam Input's desktop-style template mirrors the Deck's Y button as
