@@ -11,6 +11,9 @@ finish-args:
   - --socket=wayland
   - --filesystem=home
   - --device=all
+  # The in-app updater installs the downloaded bundle on the host via
+  # flatpak-spawn --host.
+  - --talk-name=org.freedesktop.Flatpak
   - --env=GST_PLUGIN_FEATURE_RANK=openh264enc:NONE,openh264dec:NONE
   - --env=GTK_MODULES=
 

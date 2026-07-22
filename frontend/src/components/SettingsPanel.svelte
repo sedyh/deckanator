@@ -2,10 +2,53 @@
   import { createEventDispatcher, onMount, onDestroy, tick } from 'svelte'
   import { fade, fly } from 'svelte/transition'
   import { consumeKey } from '../lib/input.js'
+  import { InstallUpdate, QuitLauncher } from '../../wailsjs/go/internal/App.js'
+  import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime.js'
+  import { getUpdateState, onUpdateState, startUpdateCheck } from '../lib/update.js'
 
   export let settings = { closeAfterLaunch: true, memoryMinMb: 0, memoryMaxMb: 0, fullscreen: false }
+  export let version = ''
 
   const dispatch = createEventDispatcher()
+
+  // Self-update row. Deliberately Flathub-free: the bundle comes from
+  // GitHub and installs over the present runtime, so it works on
+  // networks where Flathub is blocked. Steam needs no restart - the
+  // next launch runs the new version. The check itself runs once at app
+  // boot (lib/update.js); the panel opens with the cached answer and
+  // the row appears only when there is one.
+  // Extra local states: working | done
+  let upd = { ...getUpdateState(), stage: '', pct: -1 }
+  const unsubUpd = onUpdateState(s => {
+    // A shared re-check must not clobber an install in flight.
+    if (upd.state === 'working' || upd.state === 'done') return
+    upd = { ...upd, ...s }
+  })
+
+  async function updateAction() {
+    if (upd.state === 'error') { upd = { ...upd, state: 'checking' }; startUpdateCheck(); return }
+    if (upd.state === 'done') { QuitLauncher(); return }
+    if (upd.state !== 'available' || !upd.supported) return
+    upd = { ...upd, state: 'working', stage: 'Preparing...', pct: -1 }
+    try {
+      await InstallUpdate(upd.latest)
+      upd = { ...upd, state: 'done' }
+    } catch {
+      upd = { ...upd, state: 'error' }
+    }
+  }
+
+  $: updStatus =
+    upd.state === 'uptodate'  ? 'Up to date' :
+    upd.state === 'available' ? (upd.supported ? `Update to ${upd.latest}` : `New version ${upd.latest}`) :
+    upd.state === 'working'   ? (upd.pct >= 0 ? `${upd.stage} ${upd.pct}%` : upd.stage) :
+    upd.state === 'done'      ? 'Restart to finish' :
+    'Retry update check'
+
+  $: updInteractive =
+    (upd.state === 'available' && upd.supported) ||
+    ['done', 'error'].includes(upd.state)
+  $: updVisible = upd.state !== 'checking'
 
   // Heap slider: index 0 is Auto (no flag passed, the JVM decides),
   // index 1 is an empty spacer position (no tick, skipped when moving)
@@ -26,10 +69,13 @@
   const memPct = mb => (mbToIdx(mb) / (STEPS - 1)) * 100
   const memLabel = mb => (mb > 0 ? `${mb / 1024} GB` : 'Auto')
 
-  // 0 = close toggle, 1 = fullscreen, 2 = memory slider, 3 = done
+  // Focus order: close toggle, fullscreen, memory slider, update
+  // (when the build supports it), done.
   let idx = 0
-  let closeEl, fsEl, memEl, doneEl, trackEl
-  $: els = [closeEl, fsEl, memEl, doneEl]
+  let closeEl, fsEl, memEl, updEl, doneEl, trackEl
+  $: els = updVisible
+    ? [closeEl, fsEl, memEl, updEl, doneEl]
+    : [closeEl, fsEl, memEl, doneEl]
 
   // A fixed heap (-Xms == -Xmx) is the standard Minecraft
   // recommendation: a resizing pool causes GC stutter, so one slider
@@ -37,7 +83,7 @@
   $: memoryMb = settings.memoryMaxMb ?? 0
 
   function focusIdx(i) {
-    idx = Math.max(0, Math.min(3, i))
+    idx = Math.max(0, Math.min(els.length - 1, i))
     tick().then(() => els[idx]?.focus())
   }
 
@@ -78,9 +124,11 @@
   }
 
   function activate() {
-    if (idx === 0) change({ closeAfterLaunch: !settings.closeAfterLaunch })
-    else if (idx === 1) change({ fullscreen: !settings.fullscreen })
-    else if (idx === 3) dispatch('close')
+    const el = els[idx]
+    if (el === closeEl) change({ closeAfterLaunch: !settings.closeAfterLaunch })
+    else if (el === fsEl) change({ fullscreen: !settings.fullscreen })
+    else if (el === updEl) updateAction()
+    else if (el === doneEl) dispatch('close')
   }
 
   function handleKey(e) {
@@ -96,7 +144,7 @@
     if (e.key === 'Enter')     { e.preventDefault(); e.stopPropagation(); activate(); return }
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault(); e.stopPropagation()
-      if (idx === 2) bumpMem(e.key === 'ArrowRight' ? 1 : -1)
+      if (els[idx] === memEl) bumpMem(e.key === 'ArrowRight' ? 1 : -1)
     }
   }
 
@@ -107,8 +155,20 @@
     const mb = settings.memoryMaxMb ?? 0
     const normalized = idxToMb(mbToIdx(mb))
     if (normalized !== mb) changeMem(normalized)
+    EventsOn('update:progress', d => {
+      upd = {
+        ...upd,
+        state: 'working',
+        stage: d.stage,
+        pct: d.total > 0 ? Math.round(d.current * 100 / d.total) : -1,
+      }
+    })
   })
-  onDestroy(() => window.removeEventListener('keydown', handleKey, true))
+  onDestroy(() => {
+    window.removeEventListener('keydown', handleKey, true)
+    EventsOff('update:progress')
+    unsubUpd()
+  })
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
@@ -120,9 +180,9 @@
   <button
     bind:this={closeEl}
     class="row"
-    class:focused={idx === 0}
+    class:focused={els[idx] === closeEl}
     on:click={() => change({ closeAfterLaunch: !settings.closeAfterLaunch })}
-    on:focus={() => { idx = 0 }}
+    on:focus={() => { idx = els.indexOf(closeEl) }}
     tabindex="-1"
   >
     <span class="checkbox" class:checked={settings.closeAfterLaunch} />
@@ -132,9 +192,9 @@
   <button
     bind:this={fsEl}
     class="row"
-    class:focused={idx === 1}
+    class:focused={els[idx] === fsEl}
     on:click={() => change({ fullscreen: !settings.fullscreen })}
-    on:focus={() => { idx = 1 }}
+    on:focus={() => { idx = els.indexOf(fsEl) }}
     tabindex="-1"
   >
     <span class="checkbox" class:checked={settings.fullscreen} />
@@ -145,10 +205,10 @@
   <div
     bind:this={memEl}
     class="row slider-row"
-    class:focused={idx === 2}
+    class:focused={els[idx] === memEl}
     role="slider"
     aria-valuenow={memoryMb}
-    on:focus={() => { idx = 2 }}
+    on:focus={() => { idx = els.indexOf(memEl) }}
     tabindex="-1"
   >
     <div class="slider-top">
@@ -171,14 +231,38 @@
     </div>
   </div>
 
+  <div class="title about-title">About</div>
+
+  <div class="about-row">
+    <span class="row-text">Version</span>
+    <span class="about-val">{version || '...'}</span>
+  </div>
+
+  {#if updVisible}
+    <button
+      bind:this={updEl}
+      class="update-btn upd-{upd.state}"
+      class:focused={els[idx] === updEl}
+      class:dim={!updInteractive}
+      on:click={updateAction}
+      on:focus={() => { idx = els.indexOf(updEl) }}
+      tabindex="-1"
+    >
+      {#if upd.state === 'working' && upd.pct >= 0}
+        <span class="upd-fill" style="width:{upd.pct}%" />
+      {/if}
+      <span class="upd-label">{updStatus}</span>
+    </button>
+  {/if}
+
   <div class="spacer" />
 
   <button
     bind:this={doneEl}
     class="done"
-    class:focused={idx === 3}
+    class:focused={els[idx] === doneEl}
     on:click={() => dispatch('close')}
-    on:focus={() => { idx = 3 }}
+    on:focus={() => { idx = els.indexOf(doneEl) }}
     tabindex="-1"
   >
     Done
@@ -221,6 +305,58 @@
     letter-spacing: 0.08em;
     margin-bottom: 0.33rem;
   }
+
+  .about-title { margin-top: 0.44rem; }
+
+  /* Info-only line: not part of the focus order. */
+  .about-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 1.89rem;
+    padding: 0.33rem 0.78rem;
+    background: var(--card);
+  }
+
+  .about-val {
+    font-size: 0.67rem;
+    color: var(--text-sub);
+  }
+
+  /* Update button: shaped like Done, tinted by state; install progress
+     washes across it like the main install button. */
+  .update-btn {
+    position: relative;
+    overflow: hidden;
+    height: 2.22rem;
+    background: var(--card-btn);
+    color: var(--text);
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background var(--t);
+  }
+  .update-btn:hover,
+  .update-btn.focused {
+    background: var(--card-btn-hover);
+    outline: none;
+  }
+  .update-btn.focused { box-shadow: inset 0 0 0 2px var(--accent); }
+  .update-btn.dim { cursor: default; color: var(--text-sub); }
+
+  .update-btn.upd-available:not(.dim) { color: var(--accent); }
+  .update-btn.upd-working { color: var(--accent); }
+  .update-btn.upd-done { color: var(--green); }
+  .update-btn.upd-error { color: var(--red); }
+
+  .upd-fill {
+    position: absolute;
+    inset: 0;
+    background: rgba(30, 143, 255, 0.28);
+    transition: width 150ms linear;
+  }
+
+  .upd-label { position: relative; }
 
   .row {
     display: flex;

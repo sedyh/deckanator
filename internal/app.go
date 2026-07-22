@@ -26,6 +26,7 @@ import (
 	"deckanator/internal/modrinth"
 	"deckanator/internal/profile"
 	"deckanator/internal/settings"
+	"deckanator/internal/update"
 )
 
 // App is the type bound to the Wails frontend. Methods exported on *App
@@ -82,6 +83,31 @@ func (a *App) SetOnScreenKeyboard(open bool, x, y, w, h int) {
 		}
 	}
 	_ = exec.Command("xdg-open", url).Start()
+}
+
+// CheckUpdate compares the running version against the latest GitHub
+// release.
+func (a *App) CheckUpdate() (update.Info, error) { return update.Check(a.version) }
+
+// InstallUpdate downloads the given release's flatpak bundle and
+// installs it over the running app, reporting update:progress events.
+// The new version starts on the next launch; Steam needs no restart.
+func (a *App) InstallUpdate(version string) error {
+	return update.Install(version, func(stage string, current, total int) {
+		wailsruntime.EventsEmit(a.ctx, "update:progress", map[string]any{
+			"stage": stage, "current": current, "total": total,
+		})
+	})
+}
+
+// QuitLauncher exits the app (used after an update so the next launch
+// runs the new version). Deferred to a goroutine: quitting from inside
+// a binding deadlocks the macOS main thread.
+func (a *App) QuitLauncher() {
+	go func() {
+		time.Sleep(300 * time.Millisecond)
+		wailsruntime.Quit(a.ctx)
+	}()
 }
 
 // New returns an App ready to be handed to Wails. version is the build

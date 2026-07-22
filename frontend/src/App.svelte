@@ -16,6 +16,7 @@
   import { fade } from 'svelte/transition'
   import { GlyphA, GlyphB, GlyphX, GlyphY, GlyphDPadH, GlyphDPadV, IconPlus } from './lib/icons.js'
   import { setupActions } from './lib/actions.js'
+  import { startUpdateCheck } from './lib/update.js'
   import { destroy as destroyInput, consumeKey, getInputMode, onInputModeChange } from './lib/input.js'
 
   let profiles        = []
@@ -294,6 +295,7 @@
     EventsOn('install:progress', d => { progress = d; savedProgress = d })
 
     GetVersion().then(v => { appVersion = v }).catch(() => {})
+    startUpdateCheck()
     GetSettings().then(s => { appSettings = s }).catch(() => {})
 
     icons    = await GetIcons()
@@ -692,7 +694,7 @@
   </div>
 
   {#if settingsOpen}
-    <SettingsPanel settings={appSettings} on:change={onSettingsChange} on:close={closeSettings} />
+    <SettingsPanel settings={appSettings} version={appVersion} on:change={onSettingsChange} on:close={closeSettings} />
   {/if}
 
   {#if modsOpen && profile}
