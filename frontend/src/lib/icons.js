@@ -20,19 +20,6 @@ export const GlyphB = _btn('B', 'gmB')
 export const GlyphX = _btn('X', 'gmX')
 export const GlyphY = _btn('Y', 'gmY')
 
-// Menu (Start) button: white circle with a hamburger cut out.
-export const GlyphMenu = (
-  `<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">` +
-  `<defs><mask id="gmMenu">` +
-  `<rect width="20" height="20" fill="white"/>` +
-  `<rect x="5.5" y="6.1" width="9" height="1.8" fill="black"/>` +
-  `<rect x="5.5" y="9.1" width="9" height="1.8" fill="black"/>` +
-  `<rect x="5.5" y="12.1" width="9" height="1.8" fill="black"/>` +
-  `</mask></defs>` +
-  `<circle cx="10" cy="10" r="10" fill="white" mask="url(#gmMenu)"/>` +
-  `</svg>`
-)
-
 // D-pad cross path: 28×28, arms 8px wide, center at 14,14
 // M10 0 → top-left of top arm, clockwise
 const _cross = 'M10 0 H18 V10 H28 V18 H18 V28 H10 V18 H0 V10 H10 Z'

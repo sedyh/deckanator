@@ -14,7 +14,7 @@
   import ModsScreen     from './components/ModsScreen.svelte'
   import SettingsPanel  from './components/SettingsPanel.svelte'
   import { fade } from 'svelte/transition'
-  import { GlyphA, GlyphB, GlyphMenu, GlyphY, GlyphDPadH, GlyphDPadV, IconPlus } from './lib/icons.js'
+  import { GlyphA, GlyphB, GlyphX, GlyphY, GlyphDPadH, GlyphDPadV, IconPlus } from './lib/icons.js'
   import { setupActions } from './lib/actions.js'
   import { destroy as destroyInput, consumeKey, getInputMode, onInputModeChange } from './lib/input.js'
 
@@ -883,7 +883,7 @@
                   tabindex="-1"
                 >
                   {#if inputMode === 'gamepad'}
-                    <span class="glyph">{@html GlyphMenu}</span>
+                    <span class="glyph">{@html GlyphX}</span>
                   {:else}
                     <span class="keycap">O</span>
                   {/if}

@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -353,6 +354,79 @@ func removeFromShortcuts(steamDir, userID string) error {
 	return os.WriteFile(scPath, writeVDF(root), 0644)
 }
 
+// Steam's default layout for a fresh shortcut starts in a desktop-style
+// action set where X is bound to the system on-screen keyboard.
+// Preselecting the built-in "Gamepad" template keeps every button a
+// gamepad button. The selection is written under both the shortcut's
+// lowercased name and its appid (Steam matches non-Steam apps by
+// either), into every configset present: desktop mode reads
+// configset_controller_neptune.vdf while gaming mode reads the
+// Deck-serial one. Existing entries are left alone - they mean a
+// layout was already chosen.
+const gamepadTemplate = "controller_neptune_gamepad_joystick.vdf"
+
+func selectControllerTemplate(steamDir, userID string, appID uint32) error {
+	dir := filepath.Join(steamDir, "steamapps", "common", "Steam Controller Configs", userID, "config")
+	files := map[string]bool{
+		filepath.Join(dir, "configset_controller_neptune.vdf"): true,
+	}
+	if matches, err := filepath.Glob(filepath.Join(dir, "configset_*.vdf")); err == nil {
+		for _, m := range matches {
+			files[m] = true
+		}
+	}
+	if serial := deckSerial(steamDir); serial != "" {
+		files[filepath.Join(dir, "configset_"+serial+".vdf")] = true
+	}
+
+	keys := []string{strings.ToLower(appName), fmt.Sprint(appID)}
+	var firstErr error
+	for path := range files {
+		if err := patchConfigset(path, keys); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
+}
+
+func deckSerial(steamDir string) string {
+	data, err := os.ReadFile(filepath.Join(steamDir, "config", "config.vdf"))
+	if err != nil {
+		return ""
+	}
+	m := regexp.MustCompile(`"SteamDeckRegisteredSerialNumber"\s+"([^"]+)"`).FindSubmatch(data)
+	if m == nil {
+		return ""
+	}
+	return string(m[1])
+}
+
+func patchConfigset(path string, keys []string) error {
+	s := "\"controller_config\"\n{\n}\n"
+	if data, err := os.ReadFile(path); err == nil {
+		s = string(data)
+	} else if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	changed := false
+	for _, key := range keys {
+		if strings.Contains(s, `"`+key+`"`) {
+			continue
+		}
+		i := strings.LastIndex(s, "}")
+		if i < 0 {
+			return fmt.Errorf("unexpected configset format in %s", path)
+		}
+		entry := "\t\"" + key + "\"\n\t{\n\t\t\"template\"\t\t\"" + gamepadTemplate + "\"\n\t}\n"
+		s = s[:i] + entry + s[i:]
+		changed = true
+	}
+	if !changed {
+		return nil
+	}
+	return os.WriteFile(path, []byte(s), 0o644)
+}
+
 func removeArtwork(steamDir, userID string, appID uint32) {
 	gridDir := filepath.Join(steamDir, "userdata", userID, "config", "grid")
 	id := strconv.FormatUint(uint64(appID), 10)
@@ -548,6 +622,13 @@ func setupSteam(steamDir, userID, exeField, launchOptions, binPath, iconPath str
 	step(6, "Copying Steam artwork...")
 	if err := copyArtwork(steamDir, userID, appID, iconPath); err != nil {
 		fmt.Fprintf(os.Stderr, "    warning: could not copy artwork: %v\n", err)
+	} else {
+		fmt.Println("    done")
+	}
+
+	step(7, "Selecting the Gamepad controller template...")
+	if err := selectControllerTemplate(steamDir, userID, appID); err != nil {
+		fmt.Fprintf(os.Stderr, "    warning: could not select controller template: %v\n", err)
 	} else {
 		fmt.Println("    done")
 	}

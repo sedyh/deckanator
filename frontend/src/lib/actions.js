@@ -46,11 +46,13 @@ export function setupActions() {
     { type: 'button', index: 3 },
   ], { key: 'm', code: 'KeyM' })
 
-  // Settings sits on Menu/Start, not X: Steam's default layouts bind X
-  // to the system "Show Keyboard" action, which the app cannot swallow.
+  // Settings lives on X. Note for the Deck: the shortcut's default
+  // layout starts in its "desktop" action set, where Steam binds X to
+  // "Show Keyboard" (and Start toggles action sets, so Start is off
+  // limits for us). The layout's "gamepad" action set leaves X clean.
   registerAction('ui_settings', [
     { type: 'key', code: 'KeyO' },
-    { type: 'button', index: 9 },
+    { type: 'button', index: 2 },
   ], { key: 'o', code: 'KeyO' })
 
   init()
