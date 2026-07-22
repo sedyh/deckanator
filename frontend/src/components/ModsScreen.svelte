@@ -231,6 +231,12 @@
   }
 
   onMount(async () => {
+    // A dropdown left open on the main screen (stray activation during
+    // the transition) would float above this screen: a synthetic
+    // outside-click closes any of them.
+    if (document.querySelector('.wrap.open')) {
+      document.dispatchEvent(new MouseEvent('click'))
+    }
     if (!modsAllowed) {
       filterMods      = false
       filterDatapacks = true

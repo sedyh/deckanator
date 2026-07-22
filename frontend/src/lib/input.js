@@ -120,6 +120,7 @@ export function registerAction(name, triggers, emitKey = null, opts = {}) {
     sourceKey: false,
     sourceGamepad: false,
     nextRepeatAt: 0,
+    suppressed: false,
   })
 }
 
@@ -325,7 +326,13 @@ function dispatchSynthetic(emitKey) {
     const target = ae && ae !== document.body && ae !== document.documentElement
       ? ae
       : window
-    target.dispatchEvent(ev)
+    const unhandled = target.dispatchEvent(ev)
+    // Native buttons only activate on trusted events, so a synthetic
+    // Enter that nothing handled clicks the focused control explicitly
+    // (gamepad A on plain buttons like New Profile).
+    if (unhandled && emitKey.key === 'Enter' && target !== window && typeof target.click === 'function') {
+      target.click()
+    }
   } catch (err) {
     console.error('[input] dispatchSynthetic', err)
   }
@@ -367,6 +374,14 @@ function update() {
         const { pressed: gpPressed, strength: gpStrength } = evalGamepad(def, s.sourceGamepad)
         if (gpPressed) anyGamepad = true
         const pressed = keyPressed || gpPressed
+        // A button held across a focus loss must not re-fire on refocus:
+        // closing a screen shuffles window focus, and a held B would
+        // otherwise cascade one Escape per focus cycle until it backed
+        // out of the whole app.
+        if (s.suppressed) {
+          if (!pressed) s.suppressed = false
+          continue
+        }
         const strength = keyPressed ? 1 : gpStrength
         const prev = s.pressed
 
@@ -487,6 +502,7 @@ function onWindowBlur() {
   lastAccepted.clear()
   // Actions frozen mid-press would otherwise resume with stale repeat
   // timers on refocus and burst-fire (e.g. after the Steam overlay).
+  // The suppression flag holds until the control is physically released.
   for (const [, s] of actionState) {
     s.pressed = false
     s.strength = 0
@@ -495,6 +511,7 @@ function onWindowBlur() {
     s.sourceKey = false
     s.sourceGamepad = false
     s.nextRepeatAt = 0
+    s.suppressed = true
   }
 }
 
