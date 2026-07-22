@@ -34,13 +34,14 @@ modules:
       - type: shell
         commands:
           - grep -q "g_clear_object (&self->driver)" src/manette-hid-backend.c
-          # The hid backend's Steam Deck driver writes digital mappings
-          # into the controller (lizard-mode watchdog) while Steam Input
-          # manages the same state, which double-steps the dpad in
-          # Steam's own menus. Skip hidraw devices entirely: the pad the
-          # launcher needs arrives via the evdev backend.
-          - sed -i 's|backend = manette_hid_backend_new (filename);|return; /* hid backend disabled - fights Steam Input over controller state */|' src/manette-monitor.c
-          - grep -q "hid backend disabled" src/manette-monitor.c
+          # The Steam Deck hid driver is the only pad source the sandbox
+          # sees in gaming mode, but its lizard-mode writes (digital
+          # mappings + settings, re-sent by a watchdog) fight Steam
+          # Input over the controller's state and double-step the dpad
+          # in Steam's own menus. Neuter the writes, keep the reads:
+          # Steam already handles lizard mode while it runs.
+          - sed -i '/^disable_lizard_mode (ManetteSteamDeckDriver \*self)$/{n;s|^{$|{\n  return TRUE; /* no writes - Steam Input owns the controller state */|;}' src/drivers/manette-steam-deck-driver.c
+          - grep -q "no writes - Steam Input owns" src/drivers/manette-steam-deck-driver.c
     cleanup:
       - /include
       - /lib/pkgconfig
