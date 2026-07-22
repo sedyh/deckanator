@@ -284,6 +284,10 @@
 
   let inputMode = getInputMode()
   const unsubInputMode = onInputModeChange(m => { inputMode = m })
+
+  // The pointer only makes sense while the mouse is in use: gamepad and
+  // touch sessions hide it (it comes back on the first real mousemove).
+  $: document.body.classList.toggle('cursor-hidden', inputMode !== 'keyboard')
   onDestroy(() => { unsubInputMode(); destroyInput() })
 
   onMount(async () => {

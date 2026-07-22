@@ -59,6 +59,15 @@
 
   $: installedSet = new Set(installedMods.map(m => m.project_id))
 
+  // The include toggles and the query filter the installed view locally:
+  // in search mode they travel to the server as facets instead.
+  function installedVisible(r, mods, datapacks, resourcepacks, q) {
+    const isDp = r.project_type === 'datapack' || r.categories?.includes('datapack')
+    const isRp = r.project_type === 'resourcepack'
+    const typeOk = isDp ? datapacks : isRp ? resourcepacks : mods
+    return typeOk && (!q || (r.title ?? '').toLowerCase().includes(q))
+  }
+
   $: installedList = installedMods.map(m => {
       const found = results.find(r => r.project_id === m.project_id)
       return found ?? {
@@ -70,7 +79,9 @@
         project_type: m.project_type ?? 'mod',
         categories:   m.project_type === 'datapack' ? ['datapack'] : [],
       }
-    })
+    }).filter(r => installedVisible(
+      r, filterMods, filterDatapacks, filterResourcepacks, query.trim().toLowerCase()
+    ))
 
   $: effectiveTotal = filterInstalled ? installedList.length : totalHits
   $: totalPages = Math.max(1, Math.ceil(effectiveTotal / PAGE_SIZE))
@@ -119,6 +130,10 @@
     if (bundleByProject[r.project_id]) return { ...r, resource_packs: ['bundled'] }
     return r
   })
+
+  // A shrinking list (filters, search) must not leave the cursor
+  // pointing past its end.
+  $: if (listIdx >= displayList.length) listIdx = Math.max(0, displayList.length - 1)
 
   // Version labels are display-cleaned: per-segment "v"/"mc" prefixes
   // and loader/type noise tokens (fabric/quilt/datapack/...) are
@@ -384,7 +399,7 @@
     if (e.key === 'Escape') {
       e.preventDefault(); e.stopPropagation()
       if (searchActive) {
-        searchActive = false
+        deactivateSearch()
         return
       }
       onClose()
@@ -394,7 +409,7 @@
     if (focusZone === 'search' && searchActive) {
       if (e.key === 'Enter') {
         e.preventDefault(); e.stopPropagation()
-        searchActive = false
+        deactivateSearch()
         return
       }
       e.stopPropagation()
@@ -440,7 +455,7 @@
       e.preventDefault(); e.stopPropagation()
       focusCol  = 'right'
       focusZone = 'install'
-      tick().then(() => installBtnEl?.focus())
+      applyFocus('install')
     }
   }
 
@@ -500,6 +515,14 @@
     applyFocus(focusZone)
   }
 
+  // Leaving typing mode must also drop DOM focus from the input: a
+  // focused (even readonly) text field keeps the on-screen keyboard up.
+  function deactivateSearch() {
+    searchActive = false
+    searchInputEl?.blur()
+    searchRowEl?.focus()
+  }
+
   function goToList() {
     if (displayList.length === 0) return
     focusCol = 'left'
@@ -510,16 +533,18 @@
 
   function applyFocus(zone) {
     tick().then(() => {
-      if      (zone === 'search')      searchRowEl?.focus()
-      else if (zone === 'f-installed') fInstalledEl?.focus()
-      else if (zone === 'f-mods')      fModsEl?.focus()
-      else if (zone === 'f-datapacks') fDatapacksEl?.focus()
-      else if (zone === 'f-resourcepacks') fResourcepacksEl?.focus()
-      else if (zone === 'sort')        sortSelRef?.focus()
-      else if (zone === 'pager')       pagerEl?.focus()
-      else if (zone === 'version')     versionSelRef?.focus()
-      else if (zone === 'install')     installBtnEl?.focus()
-      else if (zone === 'back')        backBtnEl?.focus()
+      // Only the dropdown triggers need real DOM focus: their open-state
+      // key handling runs on the focused trigger. DOM-focusing the other
+      // controls makes gamescope summon the Deck's on-screen keyboard,
+      // so plain zones drop focus and rely on the class-driven highlight
+      // (activation goes through activateZone, not the DOM).
+      if      (zone === 'sort')    sortSelRef?.focus()
+      else if (zone === 'version') versionSelRef?.focus()
+      else if (zone === 'search')  searchRowEl?.focus()
+      else {
+        const ae = document.activeElement
+        if (ae && ae !== document.body) ae.blur()
+      }
     })
   }
 
@@ -529,6 +554,7 @@
     else if (zone === 'f-datapacks')  { filterDatapacks = !filterDatapacks; doSearch(true) }
     else if (zone === 'f-resourcepacks') { filterResourcepacks = !filterResourcepacks; doSearch(true) }
     else if (zone === 'sort')         sortSelRef?.openMenu()
+    else if (zone === 'version')      versionSelRef?.openMenu()
     else if (zone === 'pager')        goNext()
     else if (zone === 'install')      selectedMod && installedSet.has(selectedMod.project_id) ? handleDelete(selectedMod.project_id) : handleInstall()
     else if (zone === 'back')         onClose()
@@ -670,6 +696,7 @@
           placeholder="Search..."
           bind:value={query}
           readonly={!searchActive}
+          inputmode={searchActive ? 'text' : 'none'}
           on:input={onQueryInput}
           on:mousedown={() => { searchActive = true; focusCol = 'right'; focusZone = 'search' }}
           on:focus={() => { focusCol = 'right'; focusZone = 'search' }}

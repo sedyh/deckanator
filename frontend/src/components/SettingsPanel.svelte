@@ -38,7 +38,13 @@
 
   function focusIdx(i) {
     idx = Math.max(0, Math.min(3, i))
-    tick().then(() => els[idx]?.focus())
+    // Highlight is class-driven and keys arrive via the window handler:
+    // DOM-focusing the row buttons makes gamescope summon the Deck's
+    // on-screen keyboard, so keyboard/gamepad navigation drops focus.
+    tick().then(() => {
+      const ae = document.activeElement
+      if (ae && ae !== document.body) ae.blur()
+    })
   }
 
   function change(patch) {
