@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -83,6 +84,32 @@ func (a *App) SetOnScreenKeyboard(open bool, x, y, w, h int) {
 		}
 	}
 	_ = exec.Command("xdg-open", url).Start()
+}
+
+// IsDeckDesktop reports whether the launcher runs on a Steam Deck's
+// desktop session (not gamescope). That is the one environment where
+// Steam's global desktop layout pops the keyboard on X, fixable only by
+// the user switching the action set; the UI shows a hint for it.
+func (a *App) IsDeckDesktop() bool {
+	if runtime.GOOS != "linux" {
+		return false
+	}
+	session := strings.ToLower(os.Getenv("XDG_CURRENT_DESKTOP") + os.Getenv("XDG_SESSION_DESKTOP"))
+	if strings.Contains(session, "gamescope") || os.Getenv("GAMESCOPE_WAYLAND_DISPLAY") != "" {
+		return false
+	}
+	for _, p := range []string{
+		"/sys/devices/virtual/dmi/id/product_name",
+		"/sys/class/dmi/id/product_name",
+	} {
+		if b, err := os.ReadFile(p); err == nil {
+			name := strings.TrimSpace(string(b))
+			if name == "Jupiter" || name == "Galileo" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // CheckUpdate compares the running version against the latest GitHub

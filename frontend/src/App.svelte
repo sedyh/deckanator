@@ -4,7 +4,7 @@
   import {
     GetProfiles, CreateProfile, SaveProfile, DeleteProfile, GetIcons,
     GetVanillaVersions, GetLoaderVersions, GetLoaderGameVersions,
-    IsInstalled, Install, Launch, CleanGameData, GetVersion, AnalyzeCrash,
+    IsInstalled, Install, Launch, CleanGameData, GetVersion, AnalyzeCrash, IsDeckDesktop,
     InstalledLoaderVersion, GetLauncherLog, StopGame, GetSettings, SaveSettings
   } from '../wailsjs/go/internal/App.js'
 
@@ -17,7 +17,7 @@
   import { GlyphA, GlyphB, GlyphX, GlyphY, GlyphDPadH, GlyphDPadV, IconPlus } from './lib/icons.js'
   import { setupActions } from './lib/actions.js'
   import { startUpdateCheck } from './lib/update.js'
-  import { destroy as destroyInput, consumeKey, getInputMode, onInputModeChange } from './lib/input.js'
+  import { destroy as destroyInput, consumeKey, getInputMode, onInputModeChange, getMirrorState, onMirrorState } from './lib/input.js'
 
   let profiles        = []
   let icons           = []
@@ -35,6 +35,16 @@
   let carouselActionIdx = 0
 
   let modsOpen = false
+
+  // Deck desktop sessions: while Steam's desktop action set is active
+  // (X pops the keyboard, buttons are mirrored as keys), a modal notice
+  // teaches the remedy. It shows itself when input.js detects mirrored
+  // presses and disappears on its own the moment the set is switched.
+  let deckDesktop = false
+  let mirrors = getMirrorState()
+  const unsubMirror = onMirrorState(m => { mirrors = m })
+
+  $: deckNoticeOpen = deckDesktop && mirrors
 
   // Settings panel: slides in from the right, dims the rest, and
   // returns focus to wherever it was on close.
@@ -289,13 +299,14 @@
   // The pointer only makes sense while the mouse is in use: gamepad and
   // touch sessions hide it (it comes back on the first real mousemove).
   $: document.body.classList.toggle('cursor-hidden', inputMode !== 'keyboard')
-  onDestroy(() => { unsubInputMode(); destroyInput() })
+  onDestroy(() => { unsubInputMode(); unsubMirror(); destroyInput() })
 
   onMount(async () => {
     EventsOn('install:progress', d => { progress = d; savedProgress = d })
 
     GetVersion().then(v => { appVersion = v }).catch(() => {})
     startUpdateCheck()
+    IsDeckDesktop().then(v => { deckDesktop = v }).catch(() => {})
     GetSettings().then(s => { appSettings = s }).catch(() => {})
 
     icons    = await GetIcons()
@@ -541,6 +552,12 @@
     // Ownership checks come first: consumeKey must only run when this
     // handler will actually route the event, otherwise it poisons the
     // debounce map for the handler that owns it.
+    // The action-set notice is modal and not dismissible from the app:
+    // it clears itself when the user switches the set.
+    if (deckNoticeOpen) {
+      e.preventDefault()
+      return
+    }
     if (settingsOpen) return
     if (modsOpen) return
     if (document.querySelector('.wrap.open')) return
@@ -693,6 +710,41 @@
     </svg>
   </div>
 
+  {#if deckNoticeOpen}
+    <div class="deck-notice-overlay" transition:fade={{ duration: 150 }}>
+      <div class="deck-notice">
+        <div class="deck-notice-text">
+          <div>Steam's <b>desktop controls</b> are active:</div>
+          <div class="deck-notice-bullet">
+            &bull; Buttons act as keyboard keys, so presses double up
+            and navigation misbehaves.
+          </div>
+          <div>
+            Hold the <span class="deck-notice-key">&#9776;</span> button
+            until this notification appears:
+          </div>
+        </div>
+        <div class="deck-toast">
+          <svg class="deck-toast-logo" viewBox="0 0 65 65" xmlns="http://www.w3.org/2000/svg">
+            <defs><mask id="steamCut"><rect width="65" height="65" fill="white"/><path d="M30.31 23.985l.003.158-7.83 11.375c-1.268-.058-2.54.165-3.748.662a8.14 8.14 0 0 0-1.498.8L.042 29.893s-.398 6.546 1.26 11.424l12.156 5.016c.6 2.728 2.48 5.12 5.242 6.27a8.88 8.88 0 0 0 11.603-4.782 8.89 8.89 0 0 0 .684-3.656L42.18 36.16l.275.005c6.705 0 12.155-5.466 12.155-12.18s-5.44-12.16-12.155-12.174c-6.702 0-12.155 5.46-12.155 12.174zm-1.88 23.05c-1.454 3.5-5.466 5.147-8.953 3.694a6.84 6.84 0 0 1-3.524-3.362l3.957 1.64a5.04 5.04 0 0 0 6.591-2.719 5.05 5.05 0 0 0-2.715-6.601l-4.1-1.695c1.578-.6 3.372-.62 5.05.077 1.7.703 3 2.027 3.696 3.72s.692 3.56-.01 5.246M42.466 32.1a8.12 8.12 0 0 1-8.098-8.113 8.12 8.12 0 0 1 8.098-8.111 8.12 8.12 0 0 1 8.1 8.111 8.12 8.12 0 0 1-8.1 8.113m-6.068-8.126a6.09 6.09 0 0 1 6.08-6.095c3.355 0 6.084 2.73 6.084 6.095a6.09 6.09 0 0 1-6.084 6.093 6.09 6.09 0 0 1-6.081-6.093z" fill="black"/></mask></defs><path d="M1.305 41.202C5.259 54.386 17.488 64 31.959 64c17.673 0 32-14.327 32-32s-14.327-32-32-32C15.001 0 1.124 13.193.028 29.874c2.074 3.477 2.879 5.628 1.275 11.328z" fill="currentColor" mask="url(#steamCut)"/>
+          </svg>
+          <svg class="deck-toast-icon" viewBox="0 0 40 22" xmlns="http://www.w3.org/2000/svg">
+            <rect x="0.5" y="0.5" width="39" height="21" rx="3.5" fill="currentColor"/>
+            <rect x="11" y="4.5" width="18" height="13" fill="#343a46"/>
+            <circle cx="5.6" cy="7" r="1.8" fill="#343a46"/>
+            <circle cx="5.6" cy="15" r="1.8" fill="#343a46"/>
+            <circle cx="34.4" cy="7" r="1.8" fill="#343a46"/>
+            <circle cx="34.4" cy="15" r="1.8" fill="#343a46"/>
+          </svg>
+          <div class="deck-toast-lines">
+            <div><span class="deck-toast-info">i</span> Action Set Activated</div>
+            <div>Gamepad</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {/if}
+
   {#if settingsOpen}
     <SettingsPanel settings={appSettings} version={appVersion} on:change={onSettingsChange} on:close={closeSettings} />
   {/if}
@@ -822,24 +874,26 @@
         {#if inputMode !== 'touch'}
           {#key inputMode}
             <div class="hint-group" in:fade={{ duration: 180 }} out:fade={{ duration: 180 }}>
-              {#if !settingsOpen && !modsOpen}
+              {#if !deckNoticeOpen}
+                {#if !settingsOpen && !modsOpen}
+                  <span class="hint">
+                    {#if inputMode === 'gamepad'}
+                      <span class="glyph">{@html GlyphDPadH}</span>
+                    {:else}
+                      <span class="keycap">←</span><span class="keycap">→</span>
+                    {/if}
+                    <span>Profiles</span>
+                  </span>
+                {/if}
                 <span class="hint">
                   {#if inputMode === 'gamepad'}
-                    <span class="glyph">{@html GlyphDPadH}</span>
+                    <span class="glyph">{@html GlyphDPadV}</span>
                   {:else}
-                    <span class="keycap">←</span><span class="keycap">→</span>
+                    <span class="keycap">↑</span><span class="keycap">↓</span>
                   {/if}
-                  <span>Profiles</span>
+                  <span>Navigate</span>
                 </span>
               {/if}
-              <span class="hint">
-                {#if inputMode === 'gamepad'}
-                  <span class="glyph">{@html GlyphDPadV}</span>
-                {:else}
-                  <span class="keycap">↑</span><span class="keycap">↓</span>
-                {/if}
-                <span>Navigate</span>
-              </span>
             </div>
           {/key}
         {/if}
@@ -850,6 +904,12 @@
         {#if inputMode !== 'touch'}
           {#key inputMode}
             <div class="hint-group" in:fade={{ duration: 180 }} out:fade={{ duration: 180 }}>
+              {#if deckNoticeOpen}
+                <span class="hint">
+                  <span class="deck-notice-key">&#9776;</span>
+                  <span>Change action set</span>
+                </span>
+              {:else}
               {#if profile && !settingsOpen && !modsOpen}
                 <span class="hint">
                   {#if inputMode === 'gamepad'}
@@ -891,6 +951,7 @@
                   {/if}
                   <span>Settings</span>
                 </button>
+              {/if}
               {/if}
             </div>
           {/key}
@@ -934,6 +995,109 @@
     align-items: stretch;
     gap: 0.75rem;
   }
+
+  /* Deck desktop hint: a centered SteamOS-style notice above the UI,
+     below the footer so the nav bar stays readable. */
+  .deck-notice-overlay {
+    position: fixed;
+    inset: 0 0 2.44rem 0;
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.8);
+  }
+
+  .deck-notice {
+    width: 18rem;
+    padding: 0.78rem 0.89rem;
+    background: var(--bg);
+    border-left: 3px solid var(--accent);
+    box-shadow: 0 0 2rem rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    gap: 0.67rem;
+  }
+
+  .deck-notice-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.33rem;
+    font-size: 0.67rem;
+    line-height: 1.5;
+    color: var(--text);
+  }
+
+  .deck-notice-bullet {
+    padding-left: 0.5rem;
+    color: var(--text-sub);
+  }
+
+  /* A replica of Steam's own "Action Set Activated" toast, so the user
+     knows exactly what to look for. */
+  .deck-toast {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 0.61rem;
+    padding: 0.5rem 0.67rem;
+    background: #343a46;
+    color: #fff;
+  }
+
+  /* The Steam mark (PD shape from Wikimedia Commons) as a faint
+     watermark bleeding off the toast's right edge. */
+  .deck-toast-logo {
+    position: absolute;
+    right: -1.1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 4.4rem;
+    width: auto;
+    color: #fff;
+    opacity: 0.12;
+    pointer-events: none;
+  }
+
+  .deck-toast-icon {
+    width: 2.1rem;
+    height: auto;
+    flex-shrink: 0;
+  }
+
+  .deck-toast-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 0.11rem;
+    font-size: 0.67rem;
+    font-weight: 700;
+  }
+
+  .deck-toast-info {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 0.72rem;
+    height: 0.72rem;
+    border-radius: 50%;
+    background: #fff;
+    color: #343a46;
+    font-size: 0.5rem;
+    font-weight: 700;
+    vertical-align: middle;
+  }
+
+  /* Same white pill treatment as the version badge. */
+  .deck-notice-key {
+    display: inline-block;
+    padding: 0.06rem 0.39rem;
+    background: #fff;
+    border-radius: 999px;
+    color: #161920;
+    font-weight: 700;
+  }
+
 
   .panel {
     width: 16rem;

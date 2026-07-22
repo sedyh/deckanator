@@ -31,20 +31,23 @@ export function setupActions() {
     { type: 'axis', index: 0, sign: 1, requirePairUnder: { axis: 1, threshold: 0.4 } },
   ], { key: 'ArrowRight' }, { repeat: true })
 
+  // mirrorProbe: these buttons are mirrored as keys by Steam's desktop
+  // action set (A=Enter, B=Escape, Y=Space), which lets input.js detect
+  // which set is active.
   registerAction('ui_accept', [
     { type: 'key', key: 'Enter' },
     { type: 'button', index: 0 },
-  ], { key: 'Enter' })
+  ], { key: 'Enter' }, { mirrorProbe: true })
 
   registerAction('ui_cancel', [
     { type: 'key', key: 'Escape' },
     { type: 'button', index: 1 },
-  ], { key: 'Escape' })
+  ], { key: 'Escape' }, { mirrorProbe: true })
 
   registerAction('ui_mods', [
     { type: 'key', code: 'KeyM' },
     { type: 'button', index: 3 },
-  ], { key: 'm', code: 'KeyM' })
+  ], { key: 'm', code: 'KeyM' }, { mirrorProbe: true })
 
   // Settings lives on X. Note for the Deck: the shortcut's default
   // layout starts in its "desktop" action set, where Steam binds X to

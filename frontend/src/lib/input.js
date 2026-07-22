@@ -97,6 +97,45 @@ export function getInputMode() { return inputMode }
 let modeLock = false
 export function setInputModeLock(v) { modeLock = v }
 
+// --- action set detection --------------------------------------------------
+// Steam's desktop action set mirrors face buttons as keyboard keys
+// (A=Enter, B=Escape, Y=Space); its gamepad set sends buttons alone.
+// Correlating gamepad presses of the probe actions with trusted keys
+// reveals which set is active, so the UI can coach the user out of the
+// desktop set and notice the moment they switch.
+const MIRROR_WINDOW_MS = 120
+const MIRROR_KEYS = new Set(['Enter', 'Escape', ' '])
+let mirrorState = false
+let lastProbePressAt = 0
+let lastMirrorKeyAt = 0
+const mirrorListeners = new Set()
+
+export function getMirrorState() { return mirrorState }
+
+export function onMirrorState(cb) {
+  mirrorListeners.add(cb)
+  return () => mirrorListeners.delete(cb)
+}
+
+function setMirrorState(v) {
+  if (v === mirrorState) return
+  mirrorState = v
+  for (const cb of Array.from(mirrorListeners)) {
+    try { cb(v) } catch (err) { console.error('[input] mirror listener', err) }
+  }
+}
+
+function probeMirror(now) {
+  lastProbePressAt = now
+  if (now - lastMirrorKeyAt < MIRROR_WINDOW_MS) {
+    setMirrorState(true)
+    return
+  }
+  setTimeout(() => {
+    if (lastMirrorKeyAt < now) setMirrorState(false)
+  }, MIRROR_WINDOW_MS)
+}
+
 export function onInputModeChange(cb) {
   modeListeners.add(cb)
   return () => modeListeners.delete(cb)
@@ -111,7 +150,12 @@ function setInputMode(mode) {
 }
 
 export function registerAction(name, triggers, emitKey = null, opts = {}) {
-  actionDefs.set(name, { triggers, emitKey, repeat: opts.repeat === true })
+  actionDefs.set(name, {
+    triggers,
+    emitKey,
+    repeat: opts.repeat === true,
+    mirrorProbe: opts.mirrorProbe === true,
+  })
   actionState.set(name, {
     pressed: false,
     strength: 0,
@@ -393,6 +437,7 @@ function update() {
         s.justReleased = !pressed && prev
 
         if (s.justPressed) {
+          if (def.mirrorProbe && gpPressed) probeMirror(now)
           fire('pressed', name)
           if (!keyPressed && gpPressed && def.emitKey) {
             dispatchSynthetic(def.emitKey)
@@ -446,6 +491,10 @@ function onKeyDown(e) {
   // them flip the mode away from gamepad.
   if (performance.now() - lastGamepadActivity > MODE_SUPPRESS_MS) {
     setInputMode('keyboard')
+  }
+  if (MIRROR_KEYS.has(e.key)) {
+    lastMirrorKeyAt = performance.now()
+    if (lastMirrorKeyAt - lastProbePressAt < MIRROR_WINDOW_MS) setMirrorState(true)
   }
   // Steam Input's desktop-style template mirrors the Deck's Y button as
   // Space, which a focused control treats as a click (dropdowns opened
