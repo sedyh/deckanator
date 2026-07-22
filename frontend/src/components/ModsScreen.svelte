@@ -461,8 +461,14 @@
     if (focusZone === 'search') {
       if (e.key === 'Enter') {
         e.preventDefault(); e.stopPropagation()
+        // The input is usually already focused (readonly) from zone
+        // navigation, and a no-op focus() would not re-activate the IM.
+        // Blur first (before searchActive, whose on:blur reset would
+        // undo it), then focus the now-editable input fresh: that
+        // raises the caret and, under gamescope, the on-screen keyboard.
+        searchInputEl?.blur()
         searchActive = true
-        searchInputEl?.focus()
+        tick().then(() => searchInputEl?.focus())
       } else if (e.key === 'ArrowDown') {
         e.preventDefault(); e.stopPropagation()
         moveFocusRight(1)
