@@ -347,6 +347,11 @@ function pruneStale() {
 function update() {
   try {
     pruneStale()
+    // The blur event alone can't be trusted: the Steam overlay in
+    // gaming mode may take input focus without one. Ask the document
+    // directly every frame so overlay navigation doesn't leak in.
+    if (windowFocused && !document.hasFocus()) onWindowBlur()
+    else if (!windowFocused && document.hasFocus()) onWindowFocus()
     if (windowFocused) {
       const now = performance.now()
       let anyGamepad = false
@@ -474,6 +479,17 @@ function onWindowBlur() {
   for (const [, t] of pendingRelease) clearTimeout(t)
   pendingRelease.clear()
   lastAccepted.clear()
+  // Actions frozen mid-press would otherwise resume with stale repeat
+  // timers on refocus and burst-fire (e.g. after the Steam overlay).
+  for (const [, s] of actionState) {
+    s.pressed = false
+    s.strength = 0
+    s.justPressed = false
+    s.justReleased = false
+    s.sourceKey = false
+    s.sourceGamepad = false
+    s.nextRepeatAt = 0
+  }
 }
 
 function onModeMouseMove(e) {

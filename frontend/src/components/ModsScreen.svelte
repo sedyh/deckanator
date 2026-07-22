@@ -2,11 +2,11 @@
   import { onMount, onDestroy, tick } from 'svelte'
   import {
     SearchMods, GetModVersions, InstallMod, DeleteMod, ListMods, FetchModInfo, CountWorlds,
-    GetDatapackManagerStatus
+    GetDatapackManagerStatus, SetOnScreenKeyboard
   } from '../../wailsjs/go/internal/App.js'
   import SteamSelect from './SteamSelect.svelte'
   import { IconSearch, IconTrash, IconArrowLeft, IconDownload, IconBan } from '../lib/icons.js'
-  import { consumeKey } from '../lib/input.js'
+  import { consumeKey, getInputMode } from '../lib/input.js'
 
   export let profile
   // Effective loader of the app flow; profile.loader stays "vanilla"
@@ -248,6 +248,7 @@
 
   onDestroy(() => {
     window.removeEventListener('keydown', handleKey, true)
+    syncOsk(false)
   })
 
   async function doSearch(resetPage = false) {
@@ -457,6 +458,18 @@
     }
   }
 
+  // Steam's on-screen keyboard follows the search field's active state,
+  // but only for controller and touch input: a mouse or a physical
+  // keyboard means the user can already type.
+  let oskShown = false
+  function syncOsk(open) {
+    if (open === oskShown) return
+    oskShown = open
+    SetOnScreenKeyboard(open).catch(() => {})
+  }
+
+  $: if (!searchActive && oskShown) syncOsk(false)
+
   function handleRightKey(e) {
     if (focusZone === 'search') {
       if (e.key === 'Enter') {
@@ -469,6 +482,7 @@
         searchInputEl?.blur()
         searchActive = true
         tick().then(() => searchInputEl?.focus())
+        if (getInputMode() !== 'keyboard') syncOsk(true)
       } else if (e.key === 'ArrowDown') {
         e.preventDefault(); e.stopPropagation()
         moveFocusRight(1)
@@ -684,7 +698,10 @@
           bind:value={query}
           readonly={!searchActive}
           on:input={onQueryInput}
-          on:mousedown={() => { searchActive = true; focusCol = 'right'; focusZone = 'search' }}
+          on:mousedown={() => {
+            searchActive = true; focusCol = 'right'; focusZone = 'search'
+            if (getInputMode() === 'touch') syncOsk(true)
+          }}
           on:focus={() => { focusCol = 'right'; focusZone = 'search' }}
           on:blur={() => { searchActive = false }}
           tabindex="-1"

@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"sort"
 	"sync"
+	"syscall"
 	"time"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -52,6 +53,33 @@ func (a *App) StopGame() {
 	if p != nil {
 		_ = p.Kill()
 	}
+}
+
+// SetOnScreenKeyboard asks Steam to show or hide its on-screen keyboard
+// (the gamescope keyboard in Deck gaming mode). The webview offers no
+// text-input path to it, so the search field summons it explicitly. The
+// canonical channel is Steam's command pipe (what SDL and chiaki-ng
+// use); xdg-open is the fallback for sandboxed builds without access to
+// it. A no-op off Linux or when Steam isn't around.
+func (a *App) SetOnScreenKeyboard(open bool) {
+	if runtime.GOOS != "linux" {
+		return
+	}
+	url := "steam://close/keyboard"
+	if open {
+		url = "steam://open/keyboard?Mode=0"
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		pipe := filepath.Join(home, ".steam", "steam.pipe")
+		if f, err := os.OpenFile(pipe, os.O_WRONLY|syscall.O_NONBLOCK, 0); err == nil {
+			_, werr := f.WriteString(url + "\n")
+			_ = f.Close()
+			if werr == nil {
+				return
+			}
+		}
+	}
+	_ = exec.Command("xdg-open", url).Start()
 }
 
 // New returns an App ready to be handed to Wails. version is the build
