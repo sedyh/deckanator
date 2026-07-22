@@ -45,6 +45,7 @@
   let listIdx   = 0
 
   let searchInputEl
+  let searchRowEl
   let listEl
   let installBtnEl
   let backBtnEl
@@ -227,7 +228,8 @@
     fetchMissingInfo(installedMods)
     await doSearch()
     await tick()
-    searchInputEl?.focus()
+    if (displayList.length > 0) goToList()
+    else searchRowEl?.focus()
     window.addEventListener('keydown', handleKey, true)
   })
 
@@ -433,7 +435,7 @@
       e.preventDefault(); e.stopPropagation()
       focusCol  = 'right'
       focusZone = 'search'
-      tick().then(() => searchInputEl?.focus())
+      tick().then(() => searchRowEl?.focus())
     } else if (e.key === 'Enter') {
       e.preventDefault(); e.stopPropagation()
       focusCol  = 'right'
@@ -508,7 +510,7 @@
 
   function applyFocus(zone) {
     tick().then(() => {
-      if      (zone === 'search')      searchInputEl?.focus()
+      if      (zone === 'search')      searchRowEl?.focus()
       else if (zone === 'f-installed') fInstalledEl?.focus()
       else if (zone === 'f-mods')      fModsEl?.focus()
       else if (zone === 'f-datapacks') fDatapacksEl?.focus()
@@ -648,11 +650,18 @@
     <!-- Right column: controls -->
     <div class="col-right">
 
-      <!-- Search -->
+      <!-- Search. The row (not the input) takes DOM focus during plain
+           navigation: focusing the input itself summons the on-screen
+           keyboard under gamescope, so it is only focused on explicit
+           activation (Enter or click). -->
       <div
+        bind:this={searchRowEl}
         class="search-row"
         class:zone-focused={focusZone === 'search' && focusCol === 'right'}
         class:search-active={searchActive}
+        tabindex="-1"
+        role="none"
+        on:focus={() => { focusCol = 'right'; focusZone = 'search' }}
       >
         <span class="search-icon">{@html IconSearch}</span>
         <input
@@ -1108,6 +1117,7 @@
     padding: 0 0.78rem;
     height: 2rem;
     flex-shrink: 0;
+    outline: none;
     transition: box-shadow var(--t);
   }
   .search-row.zone-focused { box-shadow: inset 0 0 0 2px var(--accent); }
@@ -1322,7 +1332,16 @@
     outline: none;
   }
 
-  .back-btn { background: var(--card); color: var(--text-sub); }
+  /* Back is secondary: kept compact so the hint slot above gets the
+     vertical room for its notice text. */
+  .back-btn {
+    height: 1.78rem;
+    font-size: 0.67rem;
+    gap: 0.33rem;
+    background: var(--card);
+    color: var(--text-sub);
+  }
+  .back-btn :global(svg) { width: 0.61rem; height: 0.61rem; }
   .back-btn:hover,
   .back-btn:focus,
   .back-btn.btn-focused {
