@@ -1,0 +1,192 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900"><defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#202024"/>
+    <stop offset="1" stop-color="#111113"/>
+  </linearGradient>
+  <radialGradient id="glow" cx="0.5" cy="0.42" r="0.75">
+    <stop offset="0" stop-color="#ffffff" stop-opacity="0.07"/>
+    <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+  </radialGradient></defs><rect width="600" height="900" fill="url(#bg)"/><rect width="600" height="900" fill="url(#glow)"/><g transform="translate(80,120)">
+    <polygon points="0,0 39.836,23 0,46 -39.836,23" fill="#fff" fill-opacity="0.1158233633431715"/>
+    <polygon points="-39.836,23 0,46 0,92 -39.836,69" fill="#fff" fill-opacity="0.05212051350442717"/>
+    <polygon points="39.836,23 0,46 0,92 39.836,69" fill="#fff" fill-opacity="0.03243054173608802"/>
+  </g><g transform="translate(470,90)">
+    <polygon points="0,0 29.444,17 0,34 -29.444,17" fill="#fff" fill-opacity="0.09795588732601884"/>
+    <polygon points="-29.444,17 0,34 0,68 -29.444,51" fill="#fff" fill-opacity="0.04408014929670847"/>
+    <polygon points="29.444,17 0,34 0,68 29.444,51" fill="#fff" fill-opacity="0.027427648451285272"/>
+  </g><g transform="translate(520,260)">
+    <polygon points="0,0 50.228,29 0,58 -50.228,29" fill="#fff" fill-opacity="0.11253751994694468"/>
+    <polygon points="-50.228,29 0,58 0,116 -50.228,87" fill="#fff" fill-opacity="0.0506418839761251"/>
+    <polygon points="50.228,29 0,58 0,116 50.228,87" fill="#fff" fill-opacity="0.03151050558514451"/>
+  </g><g transform="translate(60,420)">
+    <polygon points="0,0 25.98,15 0,30 -25.98,15" fill="#fff" fill-opacity="0.13922551396266813"/>
+    <polygon points="-25.98,15 0,30 0,60 -25.98,45" fill="#fff" fill-opacity="0.06265148128320065"/>
+    <polygon points="25.98,15 0,30 0,60 25.98,45" fill="#fff" fill-opacity="0.03898314390954708"/>
+  </g><g transform="translate(300,60)">
+    <polygon points="0,0 19.052,11 0,22 -19.052,11" fill="#fff" fill-opacity="0.12033112527818007"/>
+    <polygon points="-19.052,11 0,22 0,44 -19.052,33" fill="#fff" fill-opacity="0.054149006375181025"/>
+    <polygon points="19.052,11 0,22 0,44 19.052,33" fill="#fff" fill-opacity="0.03369271507789042"/>
+  </g><g transform="translate(545,560)">
+    <polygon points="0,0 22.516,13 0,26 -22.516,13" fill="#fff" fill-opacity="0.11175217629957582"/>
+    <polygon points="-22.516,13 0,26 0,52 -22.516,39" fill="#fff" fill-opacity="0.050288479334809115"/>
+    <polygon points="22.516,13 0,26 0,52 22.516,39" fill="#fff" fill-opacity="0.03129060936388123"/>
+  </g><g transform="translate(55,620)">
+    <polygon points="0,0 29.444,17 0,34 -29.444,17" fill="#fff" fill-opacity="0.13219361307667274"/>
+    <polygon points="-29.444,17 0,34 0,68 -29.444,51" fill="#fff" fill-opacity="0.05948712588450272"/>
+    <polygon points="29.444,17 0,34 0,68 29.444,51" fill="#fff" fill-opacity="0.037014211661468364"/>
+  </g><g transform="translate(-71.012,745)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(57,57,65)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(41,41,48)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(32,32,37)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(71.012,745)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(49,49,57)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(36,36,41)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(27,27,32)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(213.036,745)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(65,65,75)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(47,47,54)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(36,36,42)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(355.06,745)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(51,51,59)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(37,37,42)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(28,28,33)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(497.084,745)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(63,63,72)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(45,45,52)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(35,35,41)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(639.108,745)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(46,46,53)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(33,33,39)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(26,26,30)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(0,786)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(55,55,63)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(40,40,46)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(31,31,36)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(142.024,786)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(54,54,61)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(39,39,45)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(30,30,35)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(284.048,786)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(48,48,55)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(35,35,40)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(27,27,31)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(426.072,786)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(59,59,67)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(42,42,49)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(33,33,38)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(568.096,786)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(50,50,58)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(36,36,42)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(28,28,33)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(-71.012,827)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(47,47,54)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(34,34,39)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(26,26,30)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(-71.012,745)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(55,55,64)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(40,40,46)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(31,31,36)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(71.012,827)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(47,47,54)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(34,34,39)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(26,26,30)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(213.036,827)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(52,52,60)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(38,38,44)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(29,29,34)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(213.036,745)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(62,62,71)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(45,45,51)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(34,34,40)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(355.06,827)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(44,44,50)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(32,32,37)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(24,24,28)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(497.084,827)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(54,54,62)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(39,39,45)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(30,30,35)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(639.108,827)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(44,44,51)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(32,32,37)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(25,25,29)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(639.108,745)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(52,52,60)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(38,38,44)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(29,29,34)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(0,868)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(65,65,75)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(47,47,54)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(36,36,42)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(142.024,868)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(46,46,52)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(33,33,38)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(25,25,30)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(284.048,868)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(64,64,73)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(46,46,53)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(36,36,41)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(426.072,868)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(56,56,64)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(40,40,47)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(31,31,36)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(568.096,868)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(61,61,70)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(44,44,50)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(34,34,39)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(-71.012,909)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(51,51,58)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(37,37,42)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(28,28,33)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(71.012,909)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(62,62,71)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(45,45,52)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(34,34,40)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(213.036,909)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(52,52,60)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(38,38,43)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(29,29,34)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(355.06,909)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(61,61,70)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(44,44,51)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(34,34,40)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(497.084,909)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(56,56,64)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(40,40,47)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(31,31,36)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(497.084,827)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(66,66,76)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(48,48,55)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(37,37,43)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(639.108,909)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(47,47,54)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(34,34,39)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(26,26,30)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(0,950)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(50,50,57)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(36,36,41)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(28,28,32)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(142.024,950)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(58,58,67)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(42,42,48)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(32,32,38)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(284.048,950)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(62,62,71)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(45,45,52)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(34,34,40)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(426.072,950)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(64,64,74)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(47,47,54)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(36,36,42)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(568.096,950)">
+    <polygon points="0,0 71.012,41 0,82 -71.012,41" fill="rgb(59,59,68)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-71.012,41 0,82 0,164 -71.012,123" fill="rgb(43,43,49)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="71.012,41 0,82 0,164 71.012,123" fill="rgb(33,33,38)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(177.14285714285717,225.2) scale(0.40816326530612246)" fill="#fff" opacity="1">
+  <rect x="0" y="139" width="105" height="105" rx="26"/>
+  <rect x="0" y="290" width="105" height="105" rx="26"/>
+  <rect x="0" y="441" width="105" height="105" rx="26"/>
+  <rect x="166" y="242" width="201" height="201" rx="85"/>
+  <rect x="307" y="0" width="295" height="176" rx="88"/>
+  <rect x="307" y="510" width="295" height="176" rx="88"/>
+  <rect x="430" y="0" width="172" height="686" rx="86"/></g><path d="M9.24-39.37L19.63-39.37Q23.69-39.37 26.59-38.62Q29.49-37.87 31.85-35.80Q38-30.53 38-19.79Q38-16.25 37.38-13.32Q36.77-10.39 35.48-8.04Q34.19-5.69 32.17-3.84Q30.59-2.42 28.71-1.56Q26.83-0.70 24.67-0.35Q22.50 0 19.79 0L9.40 0Q7.22 0 6.12-0.66Q5.02-1.32 4.69-2.51Q4.35-3.71 4.35-5.61L4.35-34.48Q4.35-37.06 5.51-38.22Q6.66-39.37 9.24-39.37M17.59-33.06L12.33-33.06L12.33-6.34L18.37-6.34Q20.36-6.34 21.48-6.45Q22.61-6.55 23.82-6.98Q25.03-7.41 25.92-8.19Q29.92-11.57 29.92-19.85Q29.92-25.67 28.16-28.57Q26.40-31.47 23.82-32.27Q21.24-33.06 17.59-33.06 M74.25-33.22L56.29-33.22L56.29-23.55L72.83-23.55Q74.65-23.55 75.55-22.73Q76.45-21.91 76.45-20.57Q76.45-19.23 75.57-18.38Q74.68-17.54 72.83-17.54L56.29-17.54L56.29-6.34L74.87-6.34Q76.75-6.34 77.70-5.47Q78.66-4.59 78.66-3.14Q78.66-1.75 77.70-0.87Q76.75 0 74.87 0L53.20 0Q50.59 0 49.45-1.15Q48.31-2.31 48.31-4.89L48.31-34.48Q48.31-36.20 48.82-37.29Q49.33-38.38 50.42-38.87Q51.51-39.37 53.20-39.37L74.25-39.37Q76.16-39.37 77.09-38.52Q78.01-37.68 78.01-36.31Q78.01-34.91 77.09-34.07Q76.16-33.22 74.25-33.22 M121.84-12.43Q121.84-10.55 120.91-8.37Q119.98-6.18 118-4.07Q116.01-1.96 112.92-0.64Q109.83 0.67 105.72 0.67Q102.61 0.67 100.06 0.08Q97.51-0.51 95.42-1.76Q93.34-3.01 91.60-5.05Q90.04-6.90 88.94-9.20Q87.84-11.49 87.29-14.10Q86.74-16.70 86.74-19.63Q86.74-24.38 88.12-28.14Q89.50-31.90 92.08-34.58Q94.66-37.25 98.12-38.65Q101.59-40.04 105.51-40.04Q110.29-40.04 114.02-38.13Q117.75-36.23 119.74-33.42Q121.73-30.62 121.73-28.12Q121.73-26.75 120.76-25.70Q119.80-24.65 118.43-24.65Q116.90-24.65 116.13-25.38Q115.36-26.10 114.42-27.88Q112.87-30.80 110.76-32.25Q108.65-33.70 105.56-33.70Q100.65-33.70 97.73-29.97Q94.82-26.24 94.82-19.36Q94.82-14.77 96.11-11.72Q97.40-8.67 99.76-7.17Q102.12-5.67 105.29-5.67Q108.73-5.67 111.11-7.37Q113.48-9.08 114.69-12.38Q115.20-13.94 115.96-14.92Q116.71-15.90 118.37-15.90Q119.80-15.90 120.82-14.90Q121.84-13.91 121.84-12.43 M140.34-35.21L140.34-21.40L155.99-37.73Q157.12-38.91 157.91-39.48Q158.71-40.04 160.02-40.04Q161.74-40.04 162.80-39.03Q163.86-38.03 163.86-36.58Q163.86-34.83 162.06-33.11L152.37-23.93L163.54-7.92Q164.72-6.26 165.31-5.01Q165.90-3.76 165.90-2.58Q165.90-1.26 164.87-0.30Q163.84 0.67 162.06 0.67Q160.40 0.67 159.35-0.04Q158.30-0.75 157.58-1.93Q156.85-3.12 156.29-4.08L146.86-18.58L140.34-12.33L140.34-4.19Q140.34-1.72 139.21-0.52Q138.08 0.67 136.31 0.67Q135.29 0.67 134.35 0.13Q133.41-0.40 132.90-1.32Q132.52-2.07 132.44-3.06Q132.36-4.06 132.36-5.94L132.36-35.21Q132.36-37.62 133.42-38.83Q134.48-40.04 136.31-40.04Q138.11-40.04 139.22-38.85Q140.34-37.65 140.34-35.21 M201.51-4.46L199.63-9.40L183.62-9.40L181.74-4.35Q180.64-1.40 179.87-0.36Q179.09 0.67 177.31 0.67Q175.81 0.67 174.66-0.43Q173.50-1.53 173.50-2.93Q173.50-3.73 173.77-4.59Q174.04-5.45 174.66-6.98L184.73-32.55Q185.16-33.65 185.76-35.19Q186.36-36.74 187.05-37.76Q187.73-38.78 188.85-39.41Q189.96-40.04 191.60-40.04Q193.27-40.04 194.38-39.41Q195.49-38.78 196.18-37.79Q196.86-36.79 197.33-35.65Q197.80-34.51 198.53-32.60L208.82-7.20Q210.02-4.30 210.02-2.98Q210.02-1.61 208.88-0.47Q207.74 0.67 206.13 0.67Q205.19 0.67 204.52 0.34Q203.85 0 203.39-0.58Q202.93-1.15 202.41-2.35Q201.89-3.54 201.51-4.46M191.55-31.64L185.72-15.39L197.48-15.39 M229.57-35.26L244.91-12.06L244.91-35.48Q244.91-37.76 245.89-38.90Q246.87-40.04 248.53-40.04Q250.25-40.04 251.24-38.90Q252.24-37.76 252.24-35.48L252.24-4.51Q252.24 0.67 247.94 0.67Q246.87 0.67 246.01 0.36Q245.15 0.05 244.40-0.62Q243.64-1.29 243-2.19Q242.35-3.09 241.71-4.03L226.75-26.96L226.75-3.89Q226.75-1.64 225.70-0.48Q224.66 0.67 223.02 0.67Q221.33 0.67 220.31-0.50Q219.29-1.67 219.29-3.89L219.29-34.27Q219.29-36.20 219.72-37.30Q220.23-38.51 221.41-39.28Q222.59-40.04 223.96-40.04Q225.03-40.04 225.80-39.69Q226.56-39.34 227.14-38.75Q227.72-38.16 228.32-37.22Q228.93-36.28 229.57-35.26 M289.46-4.46L287.58-9.40L271.57-9.40L269.69-4.35Q268.59-1.40 267.81-0.36Q267.03 0.67 265.26 0.67Q263.76 0.67 262.60-0.43Q261.45-1.53 261.45-2.93Q261.45-3.73 261.71-4.59Q261.98-5.45 262.60-6.98L272.67-32.55Q273.10-33.65 273.71-35.19Q274.31-36.74 274.99-37.76Q275.68-38.78 276.79-39.41Q277.91-40.04 279.55-40.04Q281.21-40.04 282.33-39.41Q283.44-38.78 284.12-37.79Q284.81-36.79 285.28-35.65Q285.75-34.51 286.47-32.60L296.76-7.20Q297.97-4.30 297.97-2.98Q297.97-1.61 296.83-0.47Q295.69 0.67 294.07 0.67Q293.13 0.67 292.46 0.34Q291.79 0 291.34-0.58Q290.88-1.15 290.36-2.35Q289.83-3.54 289.46-4.46M279.49-31.64L273.66-15.39L285.43-15.39 M332.69-32.79L323.99-32.79L323.99-4.19Q323.99-1.72 322.89-0.52Q321.79 0.67 320.04 0.67Q318.27 0.67 317.15-0.54Q316.04-1.75 316.04-4.19L316.04-32.79L307.34-32.79Q305.30-32.79 304.30-33.69Q303.31-34.59 303.31-36.07Q303.31-37.60 304.34-38.48Q305.38-39.37 307.34-39.37L332.69-39.37Q334.76-39.37 335.76-38.46Q336.77-37.54 336.77-36.07Q336.77-34.59 335.75-33.69Q334.73-32.79 332.69-32.79 M362.12-40.04Q368.24-40.04 372.63-37.56Q377.03-35.07 379.28-30.49Q381.54-25.92 381.54-19.74Q381.54-15.17 380.30-11.44Q379.07-7.71 376.60-4.97Q374.12-2.23 370.53-0.78Q366.93 0.67 362.28 0.67Q357.66 0.67 354.01-0.82Q350.36-2.31 347.91-5.02Q345.47-7.73 344.22-11.55Q342.97-15.36 342.97-19.79Q342.97-24.33 344.27-28.12Q345.58-31.90 348.05-34.56Q350.52-37.22 354.06-38.63Q357.61-40.04 362.12-40.04M373.45-19.79Q373.45-24.12 372.06-27.29Q370.66-30.45 368.07-32.08Q365.48-33.70 362.12-33.70Q359.73-33.70 357.70-32.80Q355.67-31.90 354.21-30.19Q352.75-28.47 351.90-25.79Q351.06-23.12 351.06-19.79Q351.06-16.44 351.90-13.72Q352.75-11.01 354.29-9.22Q355.84-7.44 357.84-6.55Q359.84-5.67 362.23-5.67Q365.29-5.67 367.85-7.20Q370.42-8.73 371.94-11.92Q373.45-15.12 373.45-19.79 M402.37-16.84L399.58-16.84L399.58-4.19Q399.58-1.69 398.48-0.51Q397.38 0.67 395.61 0.67Q393.70 0.67 392.65-0.56Q391.60-1.80 391.60-4.19L391.60-34.48Q391.60-37.06 392.76-38.22Q393.91-39.37 396.49-39.37L409.46-39.37Q412.15-39.37 414.06-39.14Q415.96-38.91 417.49-38.22Q419.35-37.44 420.77-35.99Q422.19-34.54 422.93-32.62Q423.67-30.70 423.67-28.55Q423.67-24.14 421.19-21.51Q418.70-18.88 413.65-17.78Q415.77-16.65 417.71-14.45Q419.64-12.25 421.16-9.76Q422.68-7.28 423.52-5.28Q424.37-3.28 424.37-2.52Q424.37-1.75 423.87-0.98Q423.37-0.21 422.51 0.23Q421.66 0.67 420.53 0.67Q419.18 0.67 418.27 0.04Q417.36-0.59 416.70-1.56Q416.04-2.52 414.91-4.40L411.72-9.72Q410-12.65 408.64-14.18Q407.29-15.71 405.89-16.27Q404.49-16.84 402.37-16.84M406.94-33.38L399.58-33.38L399.58-22.56L406.72-22.56Q409.60-22.56 411.56-23.06Q413.52-23.55 414.55-24.75Q415.59-25.94 415.59-28.04Q415.59-29.68 414.75-30.92Q413.92-32.17 412.44-32.79Q411.05-33.38 406.94-33.38" fill="#fff" transform="translate(86.54038085937498,614.8000000000001)"/></svg>

@@ -1,0 +1,432 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="620" viewBox="0 0 1920 620"><defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#202024"/>
+    <stop offset="1" stop-color="#111113"/>
+  </linearGradient>
+  <radialGradient id="glow" cx="0.5" cy="0.42" r="0.75">
+    <stop offset="0" stop-color="#ffffff" stop-opacity="0.07"/>
+    <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+  </radialGradient></defs><rect width="1920" height="620" fill="url(#bg)"/><rect width="1920" height="620" fill="url(#glow)"/><g transform="translate(210,90)">
+    <polygon points="0,0 36.372,21 0,42 -36.372,21" fill="#fff" fill-opacity="0.12578799790506623"/>
+    <polygon points="-36.372,21 0,42 0,84 -36.372,63" fill="#fff" fill-opacity="0.0566045990572798"/>
+    <polygon points="36.372,21 0,42 0,84 36.372,63" fill="#fff" fill-opacity="0.03522063941341855"/>
+  </g><g transform="translate(590,60)">
+    <polygon points="0,0 25.98,15 0,30 -25.98,15" fill="#fff" fill-opacity="0.11760153534244817"/>
+    <polygon points="-25.98,15 0,30 0,60 -25.98,45" fill="#fff" fill-opacity="0.052920690904101675"/>
+    <polygon points="25.98,15 0,30 0,60 25.98,45" fill="#fff" fill-opacity="0.032928429895885486"/>
+  </g><g transform="translate(980,110)">
+    <polygon points="0,0 45.032,26 0,52 -45.032,26" fill="#fff" fill-opacity="0.08133746862939441"/>
+    <polygon points="-45.032,26 0,52 0,104 -45.032,78" fill="#fff" fill-opacity="0.036601860883227484"/>
+    <polygon points="45.032,26 0,52 0,104 45.032,78" fill="#fff" fill-opacity="0.022774491216230434"/>
+  </g><g transform="translate(1420,70)">
+    <polygon points="0,0 31.176,18 0,36 -31.176,18" fill="#fff" fill-opacity="0.09642041147985514"/>
+    <polygon points="-31.176,18 0,36 0,72 -31.176,54" fill="#fff" fill-opacity="0.04338918516593481"/>
+    <polygon points="31.176,18 0,36 0,72 31.176,54" fill="#fff" fill-opacity="0.02699771521435944"/>
+  </g><g transform="translate(1780,140)">
+    <polygon points="0,0 39.836,23 0,46 -39.836,23" fill="#fff" fill-opacity="0.12361700060480135"/>
+    <polygon points="-39.836,23 0,46 0,92 -39.836,69" fill="#fff" fill-opacity="0.0556276502721606"/>
+    <polygon points="39.836,23 0,46 0,92 39.836,69" fill="#fff" fill-opacity="0.03461276016934438"/>
+  </g><g transform="translate(1180,40)">
+    <polygon points="0,0 19.052,11 0,22 -19.052,11" fill="#fff" fill-opacity="0.10102098466410347"/>
+    <polygon points="-19.052,11 0,22 0,44 -19.052,33" fill="#fff" fill-opacity="0.045459443098846565"/>
+    <polygon points="19.052,11 0,22 0,44 19.052,33" fill="#fff" fill-opacity="0.028285875705948975"/>
+  </g><g transform="translate(90,280)">
+    <polygon points="0,0 20.784,12 0,24 -20.784,12" fill="#fff" fill-opacity="0.08580915451785975"/>
+    <polygon points="-20.784,12 0,24 0,48 -20.784,36" fill="#fff" fill-opacity="0.03861411953303689"/>
+    <polygon points="20.784,12 0,24 0,48 20.784,36" fill="#fff" fill-opacity="0.02402656326500073"/>
+  </g><g transform="translate(1600,250)">
+    <polygon points="0,0 25.98,15 0,30 -25.98,15" fill="#fff" fill-opacity="0.12289545061667238"/>
+    <polygon points="-25.98,15 0,30 0,60 -25.98,45" fill="#fff" fill-opacity="0.055302952777502565"/>
+    <polygon points="25.98,15 0,30 0,60 25.98,45" fill="#fff" fill-opacity="0.034410726172668264"/>
+  </g><g transform="translate(693.0612244897959,-315) scale(1.8221574344023324)" fill="#fff" opacity="0.035">
+  <rect x="0" y="139" width="105" height="105" rx="26"/>
+  <rect x="0" y="290" width="105" height="105" rx="26"/>
+  <rect x="0" y="441" width="105" height="105" rx="26"/>
+  <rect x="166" y="242" width="201" height="201" rx="85"/>
+  <rect x="307" y="0" width="295" height="176" rx="88"/>
+  <rect x="307" y="510" width="295" height="176" rx="88"/>
+  <rect x="430" y="0" width="172" height="686" rx="86"/></g><g transform="translate(-69.28,480)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(44,44,50)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(31,31,36)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(24,24,28)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(69.28,480)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(65,65,75)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(47,47,55)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(36,36,42)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(207.84,480)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(65,65,75)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(47,47,54)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(36,36,42)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(346.4,480)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(50,50,58)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(36,36,42)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(28,28,33)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(484.96,480)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(61,61,70)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(44,44,50)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(34,34,39)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(623.52,480)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(54,54,62)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(39,39,45)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(30,30,35)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(762.0799999999999,480)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(63,63,72)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(45,45,52)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(35,35,41)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(900.6399999999999,480)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(56,56,64)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(40,40,47)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(31,31,36)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1039.1999999999998,480)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(56,56,64)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(40,40,47)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(31,31,36)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1177.7599999999998,480)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(54,54,62)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(39,39,45)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(30,30,35)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1316.3199999999997,480)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(43,43,50)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(31,31,36)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(24,24,28)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1454.8799999999997,480)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(63,63,73)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(46,46,53)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(35,35,41)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1593.4399999999996,480)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(59,59,67)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(42,42,49)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(33,33,38)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1731.9999999999995,480)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(53,53,61)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(38,38,44)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(29,29,34)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1870.5599999999995,480)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(57,57,65)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(41,41,47)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(32,32,37)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(0,520)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(47,47,54)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(34,34,39)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(26,26,30)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(138.56,520)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(48,48,55)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(35,35,40)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(27,27,31)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(277.12,520)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(55,55,63)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(39,39,46)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(30,30,35)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(415.68,520)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(46,46,53)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(33,33,38)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(26,26,30)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(554.24,520)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(54,54,62)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(39,39,45)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(30,30,35)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(692.8,520)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(46,46,53)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(33,33,38)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(26,26,30)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(831.3599999999999,520)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(45,45,52)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(32,32,37)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(25,25,29)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(969.9199999999998,520)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(59,59,67)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(42,42,49)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(33,33,38)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1108.4799999999998,520)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(54,54,62)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(39,39,45)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(30,30,35)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1247.0399999999997,520)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(61,61,70)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(44,44,51)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(34,34,40)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1385.5999999999997,520)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(57,57,65)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(41,41,47)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(32,32,37)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1524.1599999999996,520)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(59,59,68)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(43,43,50)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(33,33,39)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1662.7199999999996,520)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(66,66,76)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(48,48,55)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(37,37,43)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1801.2799999999995,520)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(65,65,74)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(47,47,54)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(36,36,42)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1939.8399999999995,520)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(64,64,74)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(46,46,53)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(36,36,42)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(-69.28,560)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(65,65,75)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(47,47,54)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(36,36,42)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(69.28,560)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(44,44,50)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(32,32,36)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(24,24,28)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(207.84,560)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(54,54,62)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(39,39,45)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(30,30,35)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(207.84,480)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(63,63,73)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(46,46,53)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(35,35,41)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(346.4,560)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(67,67,77)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(48,48,56)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(37,37,43)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(346.4,480)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(79,79,91)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(57,57,66)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(44,44,51)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(484.96,560)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(63,63,72)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(46,46,53)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(35,35,41)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(623.52,560)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(59,59,68)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(43,43,49)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(33,33,38)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(762.0799999999999,560)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(64,64,74)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(46,46,53)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(36,36,42)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(900.6399999999999,560)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(45,45,52)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(33,33,38)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(25,25,29)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1039.1999999999998,560)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(44,44,50)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(32,32,37)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(24,24,29)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1177.7599999999998,560)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(67,67,76)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(48,48,55)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(37,37,43)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1316.3199999999997,560)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(57,57,66)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(41,41,48)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(32,32,37)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1454.8799999999997,560)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(65,65,74)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(47,47,54)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(36,36,42)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1593.4399999999996,560)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(57,57,65)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(41,41,47)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(32,32,37)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1731.9999999999995,560)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(62,62,71)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(45,45,51)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(34,34,40)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1870.5599999999995,560)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(56,56,65)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(41,41,47)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(31,31,37)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(0,600)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(62,62,71)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(45,45,52)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(35,35,40)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(138.56,600)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(55,55,64)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(40,40,46)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(31,31,36)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(277.12,600)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(44,44,50)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(32,32,36)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(24,24,28)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(415.68,600)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(65,65,75)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(47,47,54)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(36,36,42)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(415.68,520)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(77,77,88)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(56,56,64)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(43,43,50)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(554.24,600)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(57,57,66)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(41,41,48)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(32,32,37)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(692.8,600)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(67,67,77)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(49,49,56)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(37,37,44)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(831.3599999999999,600)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(49,49,56)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(35,35,41)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(27,27,32)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(969.9199999999998,600)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(65,65,74)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(47,47,54)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(36,36,42)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1108.4799999999998,600)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(55,55,63)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(40,40,46)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(30,30,35)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1247.0399999999997,600)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(52,52,59)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(37,37,43)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(29,29,34)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1385.5999999999997,600)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(48,48,55)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(35,35,40)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(27,27,31)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1524.1599999999996,600)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(51,51,58)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(37,37,42)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(28,28,33)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1662.7199999999996,600)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(59,59,67)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(42,42,49)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(33,33,38)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1801.2799999999995,600)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(67,67,77)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(49,49,56)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(37,37,44)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1939.8399999999995,600)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(65,65,74)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(47,47,54)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(36,36,42)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(-69.28,640)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(66,66,76)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(48,48,55)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(37,37,43)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(69.28,640)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(43,43,50)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(31,31,36)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(24,24,28)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(207.84,640)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(45,45,52)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(33,33,38)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(25,25,29)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(207.84,560)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(53,53,61)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(39,39,44)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(30,30,35)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(346.4,640)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(50,50,58)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(36,36,42)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(28,28,33)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(484.96,640)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(53,53,61)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(38,38,44)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(30,30,35)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(623.52,640)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(61,61,70)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(44,44,51)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(34,34,39)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(762.0799999999999,640)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(44,44,51)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(32,32,37)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(25,25,29)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(900.6399999999999,640)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(62,62,71)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(45,45,52)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(34,34,40)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1039.1999999999998,640)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(56,56,64)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(40,40,46)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(31,31,36)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1177.7599999999998,640)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(63,63,72)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(45,45,52)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(35,35,41)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1316.3199999999997,640)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(46,46,52)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(33,33,38)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(25,25,30)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1454.8799999999997,640)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(49,49,57)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(36,36,41)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(27,27,32)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1593.4399999999996,640)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(46,46,52)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(33,33,38)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(25,25,30)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1731.9999999999995,640)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(60,60,68)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(43,43,50)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(33,33,39)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1870.5599999999995,640)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(56,56,64)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(40,40,47)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(31,31,36)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(0,680)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(54,54,63)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(39,39,45)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(30,30,35)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(138.56,680)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(46,46,53)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(33,33,38)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(26,26,30)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(277.12,680)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(59,59,68)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(42,42,49)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(33,33,38)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(277.12,600)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(69,69,80)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(50,50,58)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(39,39,45)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(415.68,680)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(49,49,56)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(35,35,40)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(27,27,31)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(554.24,680)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(52,52,60)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(38,38,44)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(29,29,34)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(692.8,680)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(47,47,54)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(34,34,39)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(26,26,30)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(831.3599999999999,680)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(61,61,70)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(44,44,51)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(34,34,40)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(969.9199999999998,680)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(51,51,58)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(37,37,42)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(28,28,33)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1108.4799999999998,680)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(63,63,72)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(45,45,52)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(35,35,41)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1247.0399999999997,680)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(52,52,59)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(37,37,43)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(29,29,33)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1385.5999999999997,680)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(53,53,61)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(38,38,44)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(30,30,34)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1524.1599999999996,680)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(51,51,59)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(37,37,43)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(28,28,33)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1662.7199999999996,680)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(61,61,70)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(44,44,51)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(34,34,40)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1801.2799999999995,680)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(57,57,65)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(41,41,47)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(32,32,37)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1801.2799999999995,600)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(67,67,77)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(48,48,56)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(37,37,44)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g><g transform="translate(1939.8399999999995,680)">
+    <polygon points="0,0 69.28,40 0,80 -69.28,40" fill="rgb(54,54,62)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="-69.28,40 0,80 0,160 -69.28,120" fill="rgb(39,39,45)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="69.28,40 0,80 0,160 69.28,120" fill="rgb(30,30,35)" stroke="#131316" stroke-width="2.5" stroke-linejoin="round"/>
+  </g></svg>

@@ -29,6 +29,9 @@ var artPoster []byte
 //go:embed assets/hero.png
 var artHero []byte
 
+//go:embed assets/logo.png
+var artLogo []byte
+
 //go:embed assets/icon.png
 var artIcon []byte
 
@@ -479,7 +482,7 @@ func copyArtwork(steamDir, userID string, appID uint32, iconPath string) error {
 		id + ".png":      artGrid,
 		id + "p.png":     artPoster,
 		id + "_hero.png": artHero,
-		id + "_logo.png": artIcon,
+		id + "_logo.png": artLogo,
 		id + "_icon.png": artIcon,
 	}
 	for name, data := range files {
