@@ -57,17 +57,19 @@ func (a *App) StopGame() {
 
 // SetOnScreenKeyboard asks Steam to show or hide its on-screen keyboard
 // (the gamescope keyboard in Deck gaming mode). The webview offers no
-// text-input path to it, so the search field summons it explicitly. The
-// canonical channel is Steam's command pipe (what SDL and chiaki-ng
-// use); xdg-open is the fallback for sandboxed builds without access to
-// it. A no-op off Linux or when Steam isn't around.
-func (a *App) SetOnScreenKeyboard(open bool) {
+// text-input path to it, so the search field summons it explicitly,
+// passing the field's screen rect exactly like SDL does so Steam can
+// anchor the floating keyboard to it. The canonical channel is Steam's
+// command pipe (what SDL and chiaki-ng use); xdg-open is the fallback
+// for sandboxed builds without access to it. A no-op off Linux or when
+// Steam isn't around.
+func (a *App) SetOnScreenKeyboard(open bool, x, y, w, h int) {
 	if runtime.GOOS != "linux" {
 		return
 	}
 	url := "steam://close/keyboard"
 	if open {
-		url = "steam://open/keyboard?Mode=0"
+		url = fmt.Sprintf("steam://open/keyboard?XPosition=%d&YPosition=%d&Width=%d&Height=%d&Mode=0", x, y, w, h)
 	}
 	if home, err := os.UserHomeDir(); err == nil {
 		pipe := filepath.Join(home, ".steam", "steam.pipe")

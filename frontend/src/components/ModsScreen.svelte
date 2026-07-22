@@ -475,7 +475,17 @@
     // locking the input mode keeps those moves from flipping us to
     // keyboard mode (which would unhide the cursor mid-typing).
     setInputModeLock(open)
-    SetOnScreenKeyboard(open).catch(() => {})
+    // The field's rect in physical pixels lets Steam anchor the
+    // floating keyboard to it, mirroring SDL's invocation.
+    const r = searchInputEl?.getBoundingClientRect()
+    const s = window.devicePixelRatio || 1
+    SetOnScreenKeyboard(
+      open,
+      Math.round((r?.x ?? 0) * s),
+      Math.round((r?.y ?? 0) * s),
+      Math.round((r?.width ?? 0) * s),
+      Math.round((r?.height ?? 0) * s)
+    ).catch(() => {})
   }
 
   $: if (!searchActive && oskShown) syncOsk(false)
