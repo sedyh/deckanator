@@ -323,16 +323,15 @@
     color: var(--text-sub);
   }
 
-  /* Update button: shaped like Done, tinted by state; install progress
-     washes across it like the main install button. */
+  /* Update button: sized like the setting rows, tinted by state;
+     install progress washes across it like the main install button. */
   .update-btn {
     position: relative;
     overflow: hidden;
-    height: 2.22rem;
+    min-height: 1.89rem;
+    padding: 0.33rem 0.78rem;
     background: var(--card-btn);
     color: var(--text);
-    font-size: 0.78rem;
-    font-weight: 700;
     cursor: pointer;
     transition: background var(--t);
   }
