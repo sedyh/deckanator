@@ -45,7 +45,6 @@
   let listIdx   = 0
 
   let searchInputEl
-  let searchRowEl
   let listEl
   let installBtnEl
   let backBtnEl
@@ -243,8 +242,7 @@
     fetchMissingInfo(installedMods)
     await doSearch()
     await tick()
-    if (displayList.length > 0) goToList()
-    else searchRowEl?.focus()
+    searchInputEl?.focus()
     window.addEventListener('keydown', handleKey, true)
   })
 
@@ -399,7 +397,7 @@
     if (e.key === 'Escape') {
       e.preventDefault(); e.stopPropagation()
       if (searchActive) {
-        deactivateSearch()
+        searchActive = false
         return
       }
       onClose()
@@ -409,7 +407,7 @@
     if (focusZone === 'search' && searchActive) {
       if (e.key === 'Enter') {
         e.preventDefault(); e.stopPropagation()
-        deactivateSearch()
+        searchActive = false
         return
       }
       e.stopPropagation()
@@ -450,12 +448,12 @@
       e.preventDefault(); e.stopPropagation()
       focusCol  = 'right'
       focusZone = 'search'
-      tick().then(() => searchRowEl?.focus())
+      tick().then(() => searchInputEl?.focus())
     } else if (e.key === 'Enter') {
       e.preventDefault(); e.stopPropagation()
       focusCol  = 'right'
       focusZone = 'install'
-      applyFocus('install')
+      tick().then(() => installBtnEl?.focus())
     }
   }
 
@@ -515,14 +513,6 @@
     applyFocus(focusZone)
   }
 
-  // Leaving typing mode must also drop DOM focus from the input: a
-  // focused (even readonly) text field keeps the on-screen keyboard up.
-  function deactivateSearch() {
-    searchActive = false
-    searchInputEl?.blur()
-    searchRowEl?.focus()
-  }
-
   function goToList() {
     if (displayList.length === 0) return
     focusCol = 'left'
@@ -533,18 +523,16 @@
 
   function applyFocus(zone) {
     tick().then(() => {
-      // Only the dropdown triggers need real DOM focus: their open-state
-      // key handling runs on the focused trigger. DOM-focusing the other
-      // controls makes gamescope summon the Deck's on-screen keyboard,
-      // so plain zones drop focus and rely on the class-driven highlight
-      // (activation goes through activateZone, not the DOM).
-      if      (zone === 'sort')    sortSelRef?.focus()
-      else if (zone === 'version') versionSelRef?.focus()
-      else if (zone === 'search')  searchRowEl?.focus()
-      else {
-        const ae = document.activeElement
-        if (ae && ae !== document.body) ae.blur()
-      }
+      if      (zone === 'search')      searchInputEl?.focus()
+      else if (zone === 'f-installed') fInstalledEl?.focus()
+      else if (zone === 'f-mods')      fModsEl?.focus()
+      else if (zone === 'f-datapacks') fDatapacksEl?.focus()
+      else if (zone === 'f-resourcepacks') fResourcepacksEl?.focus()
+      else if (zone === 'sort')        sortSelRef?.focus()
+      else if (zone === 'pager')       pagerEl?.focus()
+      else if (zone === 'version')     versionSelRef?.focus()
+      else if (zone === 'install')     installBtnEl?.focus()
+      else if (zone === 'back')        backBtnEl?.focus()
     })
   }
 
@@ -676,18 +664,11 @@
     <!-- Right column: controls -->
     <div class="col-right">
 
-      <!-- Search. The row (not the input) takes DOM focus during plain
-           navigation: focusing the input itself summons the on-screen
-           keyboard under gamescope, so it is only focused on explicit
-           activation (Enter or click). -->
+      <!-- Search -->
       <div
-        bind:this={searchRowEl}
         class="search-row"
         class:zone-focused={focusZone === 'search' && focusCol === 'right'}
         class:search-active={searchActive}
-        tabindex="-1"
-        role="none"
-        on:focus={() => { focusCol = 'right'; focusZone = 'search' }}
       >
         <span class="search-icon">{@html IconSearch}</span>
         <input
@@ -696,7 +677,6 @@
           placeholder="Search..."
           bind:value={query}
           readonly={!searchActive}
-          inputmode={searchActive ? 'text' : 'none'}
           on:input={onQueryInput}
           on:mousedown={() => { searchActive = true; focusCol = 'right'; focusZone = 'search' }}
           on:focus={() => { focusCol = 'right'; focusZone = 'search' }}
@@ -1144,7 +1124,6 @@
     padding: 0 0.78rem;
     height: 2rem;
     flex-shrink: 0;
-    outline: none;
     transition: box-shadow var(--t);
   }
   .search-row.zone-focused { box-shadow: inset 0 0 0 2px var(--accent); }

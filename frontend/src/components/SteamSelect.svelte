@@ -114,7 +114,7 @@
     // select must let arrows bubble to the global panel navigation without
     // marking them consumed, or the global handler would reject them.
     if (!open) {
-      if (e.key === 'Enter' || e.key === ' ') {
+      if (e.key === 'Enter') {
         if (!consumeKey(e)) return
         e.preventDefault()
         e.stopPropagation()

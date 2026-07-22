@@ -421,6 +421,15 @@ function onKeyDown(e) {
   if (performance.now() - lastGamepadActivity > MODE_SUPPRESS_MS) {
     setInputMode('keyboard')
   }
+  // Steam Input's desktop-style template mirrors the Deck's Y button as
+  // Space, which a focused control treats as a click (dropdowns opened
+  // as if A was pressed). Swallow Space entirely outside editable
+  // fields; our own navigation only ever uses Enter.
+  if (e.key === ' ' && !isEditable(e.target)) {
+    e.preventDefault()
+    e.stopPropagation()
+    return
+  }
   if (!keyMatchesAnyAction(e)) return
   if (isEditable(e.target)) return
   // Escape, M and O have no useful default action outside editable
