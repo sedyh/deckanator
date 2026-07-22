@@ -1,4 +1,10 @@
-# Deckanator
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/readme/logo-dark.png">
+    <img src=".github/readme/logo-light.png" alt="Deckanator" height="64">
+  </picture>
+  <img src="cmd/installer/assets/icon.png" alt="" height="64" align="right">
+</p>
 
 The only controller-friendly Minecraft launcher for Steam Deck with modding support.
 
@@ -49,12 +55,13 @@ Artwork is embedded in the installer binary from `cmd/installer/assets/`:
 
 | File | Size | Usage |
 |------|------|-------|
-| `grid.png` | 460x215 | Library horizontal capsule |
+| `grid.png` | 920x430 | Library horizontal capsule |
 | `poster.png` | 600x900 | Library vertical capsule |
 | `hero.png` | 1920x620 | Game detail hero banner |
-| `icon.png` | 512x512 | Icon / logo |
+| `logo.png` | 1089x270 | Transparent logo overlaid on the hero |
+| `icon.png` | 1024x1024 | Shortcut icon |
 
-Replace these files before building the installer to use custom artwork. During install, existing artwork is never overwritten.
+Vector masters live in `cmd/installer/assets/svg/`. Replace the PNG files before building the installer to use custom artwork. During install, existing artwork is never overwritten.
 
 ## Donate
 
