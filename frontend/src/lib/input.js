@@ -113,11 +113,15 @@ export function setInputModeLock(v) { modeLock = v }
 // Correlating gamepad presses of the probe actions with trusted keys
 // reveals which set is active, so the UI can coach the user out of the
 // desktop set and notice the moment they switch.
-const MIRROR_WINDOW_MS = 120
-const MIRROR_KEYS = new Set(['Enter', 'Escape', ' '])
+const MIRROR_WINDOW_MS = 150
+const MIRROR_KEYS = new Set(['Enter', 'Escape', ' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'])
+// A real keyboard produces letters and other keys the desktop set never
+// emits; seeing one recently vetoes the bare-key evidence below.
+const OTHER_KEY_VETO_MS = 10000
 let mirrorState = false
 let lastProbePressAt = 0
 let lastMirrorKeyAt = 0
+let lastOtherKeyAt = 0
 const mirrorListeners = new Set()
 
 export function getMirrorState() { return mirrorState }
@@ -145,6 +149,20 @@ function probeMirror(now) {
   }
   setTimeout(() => {
     if (lastMirrorKeyAt < now) setMirrorState(false)
+  }, MIRROR_WINDOW_MS)
+}
+
+// The desktop set emits bare keys with no gamepad press at all (the
+// firmware maps most buttons straight to keyboard), so a mirror key
+// with a connected pad, no press around it and no real typing lately
+// is itself evidence of the desktop set.
+function probeBareKey(keyAt) {
+  setTimeout(() => {
+    if (Math.abs(lastProbePressAt - keyAt) < MIRROR_WINDOW_MS) return
+    if (!gamepadReady) return
+    if (keyAt - lastOtherKeyAt < OTHER_KEY_VETO_MS) return
+    dbg('[mirror] bare mirror key, no pad press around it')
+    setMirrorState(true)
   }, MIRROR_WINDOW_MS)
 }
 
@@ -508,6 +526,9 @@ function onKeyDown(e) {
     lastMirrorKeyAt = performance.now()
     dbg('[mirror] key', JSON.stringify(e.key), 'press delta =', Math.round(lastMirrorKeyAt - lastProbePressAt))
     if (lastMirrorKeyAt - lastProbePressAt < MIRROR_WINDOW_MS) setMirrorState(true)
+    else probeBareKey(lastMirrorKeyAt)
+  } else if (!isEditable(e.target)) {
+    lastOtherKeyAt = performance.now()
   }
   // Steam Input's desktop-style template mirrors the Deck's Y button as
   // Space, which a focused control treats as a click (dropdowns opened

@@ -42,9 +42,16 @@
   // presses and disappears on its own the moment the set is switched.
   let deckDesktop = false
   let mirrors = getMirrorState()
-  const unsubMirror = onMirrorState(m => { mirrors = m })
+  // Pointer users can wave the notice away (escape hatch for a false
+  // positive with a docked keyboard); it re-arms when the evidence
+  // drops and returns.
+  let noticeDismissed = false
+  const unsubMirror = onMirrorState(m => {
+    mirrors = m
+    if (!m) noticeDismissed = false
+  })
 
-  $: deckNoticeOpen = deckDesktop && mirrors
+  $: deckNoticeOpen = deckDesktop && mirrors && !noticeDismissed
 
   // Settings panel: slides in from the right, dims the rest, and
   // returns focus to wherever it was on close.
@@ -714,7 +721,8 @@
   </div>
 
   {#if deckNoticeOpen}
-    <div class="deck-notice-overlay" transition:fade={{ duration: 150 }}>
+    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+    <div class="deck-notice-overlay" transition:fade={{ duration: 150 }} on:click={() => { noticeDismissed = true }}>
       <div class="deck-notice">
         <div class="deck-notice-text">
           <div>Steam's <b>desktop controls</b> are active:</div>
