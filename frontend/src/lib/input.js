@@ -72,6 +72,7 @@ let started = false
 let windowFocused = true
 let gamepadReady = false
 let gamepadReadyAt = 0
+let lastPadBeaconAt = 0
 
 // Stale-key eviction guards against lost keyups (Steam Input can drop
 // them), relying on OS autorepeat to refresh key activity. macOS breaks
@@ -442,6 +443,18 @@ function update() {
     if (windowFocused) {
       const now = performance.now()
       let anyGamepad = false
+      // Diagnostic: whether the pad's raw report stream ticks at rest.
+      // If timestamps freeze in the desktop action set and tick in the
+      // gamepad set, that is a passive, press-free set detector.
+      if (gamepadReady && now - lastPadBeaconAt > 1000) {
+        lastPadBeaconAt = now
+        const pads = safeGetGamepads() || []
+        for (const gp of pads) {
+          if (!gp) continue
+          dbg('[pad]', gp.index, 'ts=' + Math.round(gp.timestamp),
+              'ax=' + Array.from(gp.axes || []).slice(0, 4).map(a => a.toFixed(3)).join(','))
+        }
+      }
       for (const [name, def] of actionDefs) {
         const s = actionState.get(name)
         const keyPressed = evalKeys(def)
