@@ -29,6 +29,16 @@
 //     generate their own repeats in the poll loop instead (works uniformly
 //     for held keys and held gamepad buttons).
 
+import { LogDebug } from '../../wailsjs/go/internal/App.js'
+
+// WebKitGTK does not forward console.log to the terminal; diagnostics
+// route through the backend to be visible in `flatpak run` output.
+function dbg(...a) {
+  const msg = a.join(' ')
+  console.log(msg)
+  try { LogDebug(msg) } catch {}
+}
+
 const DEFAULT_DEADZONE = 0.5
 const AXIS_RELEASE_DEADZONE = 0.3
 const NATIVE_SAFETY_MS = 1500
@@ -120,7 +130,7 @@ export function onMirrorState(cb) {
 function setMirrorState(v) {
   if (v === mirrorState) return
   mirrorState = v
-  console.log('[mirror] state =', v)
+  dbg('[mirror] state =', v)
   for (const cb of Array.from(mirrorListeners)) {
     try { cb(v) } catch (err) { console.error('[input] mirror listener', err) }
   }
@@ -128,7 +138,7 @@ function setMirrorState(v) {
 
 function probeMirror(now) {
   lastProbePressAt = now
-  console.log('[mirror] probe press, key delta =', Math.round(now - lastMirrorKeyAt))
+  dbg('[mirror] probe press, key delta =', Math.round(now - lastMirrorKeyAt))
   if (now - lastMirrorKeyAt < MIRROR_WINDOW_MS) {
     setMirrorState(true)
     return
@@ -496,7 +506,7 @@ function onKeyDown(e) {
   }
   if (MIRROR_KEYS.has(e.key)) {
     lastMirrorKeyAt = performance.now()
-    console.log('[mirror] key', JSON.stringify(e.key), 'press delta =', Math.round(lastMirrorKeyAt - lastProbePressAt))
+    dbg('[mirror] key', JSON.stringify(e.key), 'press delta =', Math.round(lastMirrorKeyAt - lastProbePressAt))
     if (lastMirrorKeyAt - lastProbePressAt < MIRROR_WINDOW_MS) setMirrorState(true)
   }
   // Steam Input's desktop-style template mirrors the Deck's Y button as

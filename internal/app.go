@@ -122,6 +122,13 @@ func (a *App) IsDeckDesktop() bool {
 	return false
 }
 
+// LogDebug prints a frontend diagnostic line to stderr: WebKitGTK does
+// not forward console.log to the terminal, so beacons route through
+// here to be visible in `flatpak run` output.
+func (a *App) LogDebug(msg string) {
+	fmt.Fprintln(os.Stderr, "[ui]", msg)
+}
+
 // CheckUpdate compares the running version against the latest GitHub
 // release.
 func (a *App) CheckUpdate() (update.Info, error) { return update.Check(a.version) }
@@ -214,8 +221,8 @@ func (a *App) Install(loader, mcVersion, fabricVersion, javaComponent string) er
 	return minecraft.Install(
 		a.ctx,
 		loader, mcVersion, fabricVersion, javaComponent,
-		func(component string, p minecraft.ProgressFunc) (string, error) {
-			return java.Ensure(component, java.ProgressFunc(p))
+		func(component string, major int, p minecraft.ProgressFunc) (string, error) {
+			return java.Ensure(component, major, java.ProgressFunc(p))
 		},
 		java.Cached,
 		a.emitProgress,
@@ -393,8 +400,8 @@ func (a *App) Launch(profileID string) error {
 			detach = 15 * time.Second
 		}
 		if err := minecraft.Launch(p, minecraft.LaunchOptions{
-			EnsureJava: func(component string, pf minecraft.ProgressFunc) (string, error) {
-				return java.Ensure(component, java.ProgressFunc(pf))
+			EnsureJava: func(component string, major int, pf minecraft.ProgressFunc) (string, error) {
+				return java.Ensure(component, major, java.ProgressFunc(pf))
 			},
 			OnStarted:   a.setGameProc,
 			DetachAfter: detach,

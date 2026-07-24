@@ -40,7 +40,7 @@ func IsInstalled(loader, mcVersion, loaderVersion string) bool {
 func Install(
 	ctx context.Context,
 	loader, mcVersion, fabricVersion, javaComponent string,
-	ensureJava func(component string, progress ProgressFunc) (string, error),
+	ensureJava func(component string, major int, progress ProgressFunc) (string, error),
 	javaCached func(component string) string,
 	progress ProgressFunc,
 ) error {
@@ -131,15 +131,19 @@ func Install(
 	}
 
 	component := javaComponent
-	if details.JavaVersion != nil && details.JavaVersion.Component != "" {
-		component = details.JavaVersion.Component
+	major := 0
+	if details.JavaVersion != nil {
+		if details.JavaVersion.Component != "" {
+			component = details.JavaVersion.Component
+		}
+		major = details.JavaVersion.MajorVersion
 	}
 	if component == "" {
 		component = "java-runtime-gamma"
 	}
 	if javaCached(component) == "" {
 		progress("Downloading Java", 93, 100)
-		if _, err := ensureJava(component, func(stage string, cur, tot int) {
+		if _, err := ensureJava(component, major, func(stage string, cur, tot int) {
 			progress(stage, 93+cur*6/100, 100)
 		}); err != nil {
 			return fmt.Errorf("java: %w", err)

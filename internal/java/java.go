@@ -7,7 +7,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -44,21 +46,21 @@ type runtimeFile struct {
 	Target string `json:"target,omitempty"`
 }
 
-// Ensure returns a path to a working java executable. It tries the
-// cached Mojang runtime for component first, then any other cached
-// Mojang runtime, then system Java, and finally downloads the Mojang
-// runtime for component.
-func Ensure(component string, progress ProgressFunc) (string, error) {
+// Ensure returns a path to a working java executable no older than
+// major (0 accepts any version). It tries the cached Mojang runtime
+// for component first, then any other cached Mojang runtime, then
+// system Java, and finally downloads the Mojang runtime for component.
+func Ensure(component string, major int, progress ProgressFunc) (string, error) {
 	if component == "" {
 		component = "java-runtime-gamma"
 	}
-	if j := Cached(component); j != "" && works(j) {
+	if j := Cached(component); j != "" && meets(j, major) {
 		return j, nil
 	}
-	if j := anyMojang(); j != "" {
+	if j := anyMojang(major); j != "" {
 		return j, nil
 	}
-	if j, ok := findSystem(); ok {
+	if j, ok := findSystem(major); ok {
 		return j, nil
 	}
 	return downloadMojang(component, progress)
@@ -74,7 +76,7 @@ func Cached(component string) string {
 	return findBinary(dir)
 }
 
-func anyMojang() string {
+func anyMojang(major int) string {
 	entries, err := os.ReadDir(filepath.Join(config.GameDir(), "runtime"))
 	if err != nil {
 		return ""
@@ -84,40 +86,42 @@ func anyMojang() string {
 			continue
 		}
 		j := findBinary(filepath.Join(config.GameDir(), "runtime", e.Name()))
-		if j != "" && works(j) {
+		if j != "" && meets(j, major) {
 			return j
 		}
 	}
 	return ""
 }
 
-func findSystem() (string, bool) {
+func findSystem(major int) (string, bool) {
 	if home := os.Getenv("JAVA_HOME"); home != "" {
 		j := filepath.Join(home, "bin", "java")
-		if works(j) {
+		if meets(j, major) {
 			return j, true
 		}
 	}
 	if runtime.GOOS == "darwin" {
 		if out, err := exec.Command("/usr/libexec/java_home").Output(); err == nil {
 			j := filepath.Join(strings.TrimSpace(string(out)), "bin", "java")
-			if works(j) {
+			if meets(j, major) {
 				return j, true
 			}
 		}
 	}
 	for _, c := range platformPaths() {
-		if works(c) {
+		if meets(c, major) {
 			return c, true
 		}
 	}
-	if path, err := exec.LookPath("java"); err == nil && works(path) {
+	if path, err := exec.LookPath("java"); err == nil && meets(path, major) {
 		return path, true
 	}
 	return "", false
 }
 
-func works(path string) bool {
+// meets reports whether the binary at path runs and is at least the
+// given major version. major 0 accepts any working Java.
+func meets(path string, major int) bool {
 	if path == "" {
 		return false
 	}
@@ -125,10 +129,29 @@ func works(path string) bool {
 		return false
 	}
 	out, err := exec.Command(path, "-version").CombinedOutput()
-	if err != nil {
+	if err != nil || !strings.Contains(string(out), "version") {
 		return false
 	}
-	return strings.Contains(string(out), "version")
+	if major == 0 {
+		return true
+	}
+	return parseMajor(string(out)) >= major
+}
+
+var versionRe = regexp.MustCompile(`version "([0-9]+)(?:\.([0-9]+))?`)
+
+// parseMajor extracts the major Java version from `java -version`
+// output, mapping legacy "1.x" strings to x. Unparsable output is 0.
+func parseMajor(out string) int {
+	m := versionRe.FindStringSubmatch(out)
+	if m == nil {
+		return 0
+	}
+	major, _ := strconv.Atoi(m[1])
+	if major == 1 && m[2] != "" {
+		major, _ = strconv.Atoi(m[2])
+	}
+	return major
 }
 
 func findBinary(dir string) string {

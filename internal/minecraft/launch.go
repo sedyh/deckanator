@@ -27,7 +27,7 @@ var blockedJVMArgs = []string{
 // Keeping them explicit avoids an import cycle between this package and
 // the java runtime resolver.
 type LaunchOptions struct {
-	EnsureJava func(component string, progress ProgressFunc) (string, error)
+	EnsureJava func(component string, major int, progress ProgressFunc) (string, error)
 	// OnStarted is called with the game process right after it starts,
 	// letting the caller expose a kill switch for hung games.
 	OnStarted func(p *os.Process)
@@ -60,10 +60,14 @@ func Launch(p profile.Profile, opts LaunchOptions) error {
 	}
 
 	component := "java-runtime-gamma"
-	if vanilla.JavaVersion != nil && vanilla.JavaVersion.Component != "" {
-		component = vanilla.JavaVersion.Component
+	major := 0
+	if vanilla.JavaVersion != nil {
+		if vanilla.JavaVersion.Component != "" {
+			component = vanilla.JavaVersion.Component
+		}
+		major = vanilla.JavaVersion.MajorVersion
 	}
-	java, err := opts.EnsureJava(component, func(string, int, int) {})
+	java, err := opts.EnsureJava(component, major, func(string, int, int) {})
 	if err != nil {
 		return err
 	}

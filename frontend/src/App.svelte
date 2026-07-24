@@ -5,7 +5,7 @@
     GetProfiles, CreateProfile, SaveProfile, DeleteProfile, GetIcons,
     GetVanillaVersions, GetLoaderVersions, GetLoaderGameVersions,
     IsInstalled, Install, Launch, CleanGameData, GetVersion, AnalyzeCrash, IsDeckDesktop,
-    InstalledLoaderVersion, GetLauncherLog, StopGame, GetSettings, SaveSettings
+    InstalledLoaderVersion, GetLauncherLog, StopGame, GetSettings, SaveSettings, LogDebug
   } from '../wailsjs/go/internal/App.js'
 
   import Carousel       from './components/Carousel.svelte'
@@ -308,7 +308,7 @@
     startUpdateCheck()
     IsDeckDesktop().then(v => {
       deckDesktop = v
-      console.log('[deck-notice] deckDesktop =', v)
+      LogDebug('[deck-notice] deckDesktop = ' + v).catch(() => {})
     }).catch(() => {})
     GetSettings().then(s => { appSettings = s }).catch(() => {})
 
