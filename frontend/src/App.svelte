@@ -60,22 +60,23 @@
     actionSetGamepad === null ? mirrors : actionSetGamepad === false
   )
 
-  // The visible state trails the detector with a minimum dwell per
-  // state: however fast the sets flip, the notice appears and leaves
-  // with the same even pacing.
-  const NOTICE_MIN_DWELL_MS = 1000
+  // Symmetric pacing measured from the user's physical switch: the
+  // detector itself spends the silence window (~1s) before the notice
+  // can appear, while the switch back is detected instantly - so the
+  // hide is delayed by that same window and both transitions land
+  // about a second after the press.
+  const NOTICE_HIDE_DELAY_MS = 1000
   let deckNoticeShown = false
-  let noticeFlippedAt = 0
   let noticeTimer
   $: syncDeckNotice(deckNoticeOpen)
   function syncDeckNotice(target) {
     clearTimeout(noticeTimer)
     if (target === deckNoticeShown) return
-    const wait = Math.max(0, NOTICE_MIN_DWELL_MS - (performance.now() - noticeFlippedAt))
-    noticeTimer = setTimeout(() => {
-      deckNoticeShown = target
-      noticeFlippedAt = performance.now()
-    }, wait)
+    if (target) {
+      deckNoticeShown = true
+      return
+    }
+    noticeTimer = setTimeout(() => { deckNoticeShown = false }, NOTICE_HIDE_DELAY_MS)
   }
 
   // Settings panel: slides in from the right, dims the rest, and
