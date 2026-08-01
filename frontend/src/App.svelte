@@ -733,7 +733,7 @@
 
   {#if deckNoticeOpen}
     <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-    <div class="deck-notice-overlay" transition:fade={{ duration: 150 }} on:click={() => { noticeDismissed = true }}>
+    <div class="deck-notice-overlay" in:fade={{ duration: 150 }} out:fade={{ duration: 350 }} on:click={() => { noticeDismissed = true }}>
       <div class="deck-notice">
         <div class="deck-notice-text">
           <div>Steam's <b>desktop controls</b> are active:</div>
