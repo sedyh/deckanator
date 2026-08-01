@@ -19,8 +19,9 @@ import (
 
 // Silence longer than this on the virtual pad means the desktop set.
 // Measured on a Deck at rest (screen dimming included): ~740 events/s
-// with a worst-case gap of 20ms, so half a second is a 25x margin.
-const silence = 500 * time.Millisecond
+// with a worst-case gap of 20ms, so a second is a 50x margin; the
+// notice appearing within about a second is fast enough.
+const silence = time.Second
 
 const rescanEvery = 5 * time.Second
 
