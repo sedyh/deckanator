@@ -60,6 +60,24 @@
     actionSetGamepad === null ? mirrors : actionSetGamepad === false
   )
 
+  // The visible state trails the detector with a minimum dwell per
+  // state: however fast the sets flip, the notice appears and leaves
+  // with the same even pacing.
+  const NOTICE_MIN_DWELL_MS = 1000
+  let deckNoticeShown = false
+  let noticeFlippedAt = 0
+  let noticeTimer
+  $: syncDeckNotice(deckNoticeOpen)
+  function syncDeckNotice(target) {
+    clearTimeout(noticeTimer)
+    if (target === deckNoticeShown) return
+    const wait = Math.max(0, NOTICE_MIN_DWELL_MS - (performance.now() - noticeFlippedAt))
+    noticeTimer = setTimeout(() => {
+      deckNoticeShown = target
+      noticeFlippedAt = performance.now()
+    }, wait)
+  }
+
   // Settings panel: slides in from the right, dims the rest, and
   // returns focus to wherever it was on close.
   let settingsOpen   = false
@@ -575,7 +593,7 @@
     // debounce map for the handler that owns it.
     // The action-set notice is modal and not dismissible from the app:
     // it clears itself when the user switches the set.
-    if (deckNoticeOpen) {
+    if (deckNoticeShown) {
       e.preventDefault()
       return
     }
@@ -731,9 +749,9 @@
     </svg>
   </div>
 
-  {#if deckNoticeOpen}
+  {#if deckNoticeShown}
     <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-    <div class="deck-notice-overlay" in:fade={{ duration: 150 }} out:fade={{ duration: 350 }} on:click={() => { noticeDismissed = true }}>
+    <div class="deck-notice-overlay" transition:fade={{ duration: 150 }} on:click={() => { noticeDismissed = true }}>
       <div class="deck-notice">
         <div class="deck-notice-text">
           <div>Steam's <b>desktop controls</b> are active:</div>
@@ -926,7 +944,7 @@
         {#if inputMode !== 'touch'}
           {#key inputMode}
             <div class="hint-group" in:fade={{ duration: 180 }} out:fade={{ duration: 180 }}>
-              {#if deckNoticeOpen}
+              {#if deckNoticeShown}
                 <span class="hint">
                   <span class="deck-notice-key">&#9776;</span>
                   <span>Change action set</span>
