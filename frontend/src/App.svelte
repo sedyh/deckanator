@@ -42,6 +42,11 @@
   // presses and disappears on its own the moment the set is switched.
   let deckDesktop = false
   let mirrors = getMirrorState()
+  // The backend watcher reads the Steam virtual pad's event flow: it
+  // ticks at rest in the gamepad set and goes silent in the desktop
+  // set, so the state needs no user input. null until established;
+  // the mirrored-keys heuristic covers that gap as a fallback.
+  let actionSetGamepad = null
   // Pointer users can wave the notice away (escape hatch for a false
   // positive with a docked keyboard); it re-arms when the evidence
   // drops and returns.
@@ -51,7 +56,9 @@
     if (!m) noticeDismissed = false
   })
 
-  $: deckNoticeOpen = deckDesktop && mirrors && !noticeDismissed
+  $: deckNoticeOpen = deckDesktop && !noticeDismissed && (
+    actionSetGamepad === null ? mirrors : actionSetGamepad === false
+  )
 
   // Settings panel: slides in from the right, dims the rest, and
   // returns focus to wherever it was on close.
@@ -310,6 +317,10 @@
 
   onMount(async () => {
     EventsOn('install:progress', d => { progress = d; savedProgress = d })
+    EventsOn('actionset', gp => {
+      actionSetGamepad = gp
+      if (gp) noticeDismissed = false
+    })
 
     GetVersion().then(v => { appVersion = v }).catch(() => {})
     startUpdateCheck()

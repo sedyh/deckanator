@@ -19,6 +19,7 @@ import (
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
+	"deckanator/internal/actionset"
 	"deckanator/internal/config"
 	"deckanator/internal/icons"
 	"deckanator/internal/java"
@@ -159,8 +160,17 @@ func (a *App) QuitLauncher() {
 // hash on local builds, "dev" otherwise).
 func New(version string) *App { return &App{version: version} }
 
-// Startup captures the Wails context used for event emission.
-func (a *App) Startup(ctx context.Context) { a.ctx = ctx }
+// Startup captures the Wails context used for event emission and, on a
+// Deck desktop session, starts the passive action-set watcher.
+func (a *App) Startup(ctx context.Context) {
+	a.ctx = ctx
+	if a.IsDeckDesktop() {
+		actionset.Watch(ctx, func(gamepadSet bool) {
+			fmt.Fprintln(os.Stderr, "[actionset] gamepad =", gamepadSet)
+			wailsruntime.EventsEmit(a.ctx, "actionset", gamepadSet)
+		})
+	}
+}
 
 // GetVersion returns the build identifier shown in the UI.
 func (a *App) GetVersion() string { return a.version }
