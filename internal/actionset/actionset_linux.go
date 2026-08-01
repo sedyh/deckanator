@@ -18,7 +18,9 @@ import (
 )
 
 // Silence longer than this on the virtual pad means the desktop set.
-const silence = 3 * time.Second
+// Measured on a Deck at rest (screen dimming included): ~740 events/s
+// with a worst-case gap of 20ms, so half a second is a 25x margin.
+const silence = 500 * time.Millisecond
 
 const rescanEvery = 5 * time.Second
 
@@ -76,7 +78,7 @@ func Watch(ctx context.Context, emit func(gamepadSet bool)) {
 		established := false
 		current := false
 
-		ticker := time.NewTicker(300 * time.Millisecond)
+		ticker := time.NewTicker(150 * time.Millisecond)
 		defer ticker.Stop()
 
 		for {
