@@ -23,6 +23,9 @@ type Settings struct {
 	MemoryMaxMB int `json:"memoryMaxMb"`
 	// Fullscreen starts the game with --fullscreen.
 	Fullscreen bool `json:"fullscreen"`
+	// UpdateChannel selects which releases the updater offers: ""
+	// (stable only) or "rc" (release candidates included).
+	UpdateChannel string `json:"updateChannel"`
 }
 
 func defaults() Settings {

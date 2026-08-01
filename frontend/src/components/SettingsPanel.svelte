@@ -100,10 +100,10 @@
   // Focus order: close toggle, fullscreen, memory slider, update
   // (when the build supports it), done.
   let idx = 0
-  let closeEl, fsEl, memEl, updEl, doneEl, trackEl
+  let closeEl, fsEl, chanEl, memEl, updEl, doneEl, trackEl
   $: els = updVisible
-    ? [closeEl, fsEl, memEl, updEl, doneEl]
-    : [closeEl, fsEl, memEl, doneEl]
+    ? [closeEl, fsEl, chanEl, memEl, updEl, doneEl]
+    : [closeEl, fsEl, chanEl, memEl, doneEl]
 
   // A fixed heap (-Xms == -Xmx) is the standard Minecraft
   // recommendation: a resizing pool causes GC stutter, so one slider
@@ -151,10 +151,15 @@
     window.addEventListener('pointerup', up)
   }
 
+  function toggleChannel() {
+    change({ updateChannel: settings.updateChannel === 'beta' ? '' : 'beta' })
+  }
+
   function activate() {
     const el = els[idx]
     if (el === closeEl) change({ closeAfterLaunch: !settings.closeAfterLaunch })
     else if (el === fsEl) change({ fullscreen: !settings.fullscreen })
+    else if (el === chanEl) toggleChannel()
     else if (el === updEl) updateAction()
     else if (el === doneEl) dispatch('close')
   }
@@ -173,6 +178,10 @@
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault(); e.stopPropagation()
       if (els[idx] === memEl) bumpMem(e.key === 'ArrowRight' ? 1 : -1)
+      else if (els[idx] === chanEl) {
+        const beta = e.key === 'ArrowRight'
+        if ((settings.updateChannel === 'beta') !== beta) toggleChannel()
+      }
     }
   }
 
@@ -228,6 +237,32 @@
     <span class="checkbox" class:checked={settings.fullscreen} />
     <span class="row-text">Fullscreen game</span>
   </button>
+
+  <!-- svelte-ignore a11y-no-noninteractive-tabindex a11y-no-static-element-interactions -->
+  <div
+    bind:this={chanEl}
+    class="row"
+    class:focused={els[idx] === chanEl}
+    role="none"
+    on:focus={() => { idx = els.indexOf(chanEl) }}
+    tabindex="-1"
+  >
+    <span class="row-text">Update channel</span>
+    <span class="chan-switch">
+      <button
+        class="chan-seg"
+        class:active={settings.updateChannel !== 'beta'}
+        on:click|stopPropagation={() => { if (settings.updateChannel === 'beta') toggleChannel() }}
+        tabindex="-1"
+      >Release</button>
+      <button
+        class="chan-seg"
+        class:active={settings.updateChannel === 'beta'}
+        on:click|stopPropagation={() => { if (settings.updateChannel !== 'beta') toggleChannel() }}
+        tabindex="-1"
+      >Beta</button>
+    </span>
+  </div>
 
   <!-- svelte-ignore a11y-no-noninteractive-tabindex a11y-no-static-element-interactions -->
   <div
@@ -330,6 +365,27 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
     margin-bottom: 0.33rem;
+  }
+
+  .chan-switch {
+    display: flex;
+    background: var(--card-btn);
+    padding: 0.11rem;
+    gap: 0.11rem;
+  }
+
+  .chan-seg {
+    padding: 0.17rem 0.5rem;
+    font-size: 0.61rem;
+    font-weight: 700;
+    color: var(--text-sub);
+    cursor: pointer;
+    transition: background var(--t), color var(--t);
+  }
+
+  .chan-seg.active {
+    background: var(--accent);
+    color: #fff;
   }
 
   .about-title { margin-top: 0.44rem; }

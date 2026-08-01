@@ -103,8 +103,12 @@
   }
 
   function onSettingsChange(e) {
+    const prevChannel = appSettings.updateChannel
     appSettings = e.detail
-    SaveSettings(appSettings).catch(() => {})
+    SaveSettings(appSettings).then(() => {
+      // A channel flip changes what "latest" means: re-ask GitHub.
+      if (appSettings.updateChannel !== prevChannel) startUpdateCheck()
+    }).catch(() => {})
   }
 
   const FABRIC_LIKE = ['fabric', 'quilt']

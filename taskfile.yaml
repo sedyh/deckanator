@@ -63,3 +63,8 @@ tasks:
     desc: Tail the launcher log on the Deck
     cmds:
       - ssh steamdeck 'tail -n 50 -f /tmp/deck.log'
+
+  promote:
+    desc: Retag the newest -rc.N as the stable release and push it
+    cmds:
+      - bash build/promote.sh

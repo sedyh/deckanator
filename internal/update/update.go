@@ -15,6 +15,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+
+	"deckanator/internal/settings"
 )
 
 const (
@@ -36,11 +38,29 @@ func supported() bool {
 }
 
 type release struct {
-	TagName string `json:"tag_name"`
-	Assets  []struct {
+	TagName    string `json:"tag_name"`
+	Prerelease bool   `json:"prerelease"`
+	Assets     []struct {
 		Name string `json:"name"`
 		URL  string `json:"browser_download_url"`
 	} `json:"assets"`
+}
+
+func fetchReleases() ([]release, error) {
+	url := fmt.Sprintf("https://api.github.com/repos/%s/releases?per_page=30", repo)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("github: %s", resp.Status)
+	}
+	var rels []release
+	if err := json.NewDecoder(resp.Body).Decode(&rels); err != nil {
+		return nil, err
+	}
+	return rels, nil
 }
 
 func fetchRelease(tag string) (*release, error) {
@@ -63,22 +83,69 @@ func fetchRelease(tag string) (*release, error) {
 	return &rel, nil
 }
 
-// parseTag turns "v0.4.68" into comparable numbers. Non-release builds
-// (short hashes, "dev") don't parse and never see updates.
-func parseTag(tag string) ([]int, bool) {
-	parts := strings.Split(strings.TrimPrefix(strings.TrimSpace(tag), "v"), ".")
+// version is a parsed tag: core numbers plus the prerelease iteration
+// (pre < 0 means a stable release, which outranks any candidate of the
+// same core: v0.5.0-rc.2 < v0.5.0).
+type version struct {
+	nums []int
+	pre  int
+}
+
+// parseTag turns "v0.4.68" or "v0.5.0-rc.1" into a comparable version.
+// Non-release builds (short hashes, "dev") don't parse and never see
+// updates.
+func parseTag(tag string) (version, bool) {
+	s := strings.TrimPrefix(strings.TrimSpace(tag), "v")
+	core, suffix, hasSuffix := strings.Cut(s, "-")
+
+	parts := strings.Split(core, ".")
 	if len(parts) < 2 {
-		return nil, false
+		return version{}, false
 	}
-	nums := make([]int, len(parts))
+	v := version{nums: make([]int, len(parts)), pre: -1}
 	for i, p := range parts {
 		n, err := strconv.Atoi(p)
 		if err != nil {
-			return nil, false
+			return version{}, false
 		}
-		nums[i] = n
+		v.nums[i] = n
 	}
-	return nums, true
+
+	if hasSuffix {
+		// Accept rc.N, rcN, beta.N and similar: the trailing number is
+		// the candidate iteration; a bare word counts as iteration 0.
+		digits := strings.TrimLeft(suffix, "abcdefghijklmnopqrstuvwxyz.")
+		if digits == "" {
+			v.pre = 0
+		} else {
+			n, err := strconv.Atoi(digits)
+			if err != nil {
+				return version{}, false
+			}
+			v.pre = n
+		}
+	}
+	return v, true
+}
+
+func less(a, b version) bool {
+	for i := 0; i < len(a.nums) || i < len(b.nums); i++ {
+		var av, bv int
+		if i < len(a.nums) {
+			av = a.nums[i]
+		}
+		if i < len(b.nums) {
+			bv = b.nums[i]
+		}
+		if av != bv {
+			return av < bv
+		}
+	}
+	// Same core: a stable release outranks any candidate.
+	if (a.pre < 0) != (b.pre < 0) {
+		return a.pre >= 0
+	}
+	return a.pre < b.pre
 }
 
 func newer(current, latest string) bool {
@@ -87,30 +154,40 @@ func newer(current, latest string) bool {
 	if !okC || !okL {
 		return false
 	}
-	for i := 0; i < len(c) || i < len(l); i++ {
-		var cv, lv int
-		if i < len(c) {
-			cv = c[i]
-		}
-		if i < len(l) {
-			lv = l[i]
-		}
-		if lv != cv {
-			return lv > cv
-		}
-	}
-	return false
+	return less(c, l)
 }
 
-// Check compares the running version against the latest release.
+// Check compares the running version against the newest release the
+// selected update channel offers: the stable channel skips release
+// candidates, the beta channel includes them.
 func Check(current string) (Info, error) {
 	info := Info{Supported: supported()}
-	rel, err := fetchRelease("")
+	rels, err := fetchReleases()
 	if err != nil {
 		return info, err
 	}
-	info.Version = rel.TagName
-	info.Available = info.Supported && newer(current, rel.TagName)
+	beta := settings.Load().UpdateChannel == "beta"
+
+	var bestTag string
+	var best version
+	for _, r := range rels {
+		if r.Prerelease && !beta {
+			continue
+		}
+		v, ok := parseTag(r.TagName)
+		if !ok {
+			continue
+		}
+		if bestTag == "" || less(best, v) {
+			bestTag = r.TagName
+			best = v
+		}
+	}
+	if bestTag == "" {
+		return info, fmt.Errorf("no releases found")
+	}
+	info.Version = bestTag
+	info.Available = info.Supported && newer(current, bestTag)
 	return info, nil
 }
 
